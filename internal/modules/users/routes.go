@@ -15,9 +15,9 @@ func RegisterRoutes(
 	perms middleware.PermissionChecker,
 	orgs middleware.OrgMembership,
 ) {
-	mux.HandleFunc("GET /users", middleware.RequirePermission(verifier, perms, "users:read", h.List))
-	mux.HandleFunc("POST /users", middleware.RequirePermission(verifier, perms, "users:create", h.Create))
-	mux.HandleFunc("GET /users/{id}", middleware.RequirePermission(verifier, perms, "users:read", h.ByID))
+	mux.HandleFunc("GET /api/v1/users", middleware.RequirePermission(verifier, perms, "users:read", h.List))
+	mux.HandleFunc("POST /api/v1/users", middleware.RequirePermission(verifier, perms, "users:create", h.Create))
+	mux.HandleFunc("GET /api/v1/users/{id}", middleware.RequirePermission(verifier, perms, "users:read", h.ByID))
 
 	mux.HandleFunc("GET /api/v1/org/{slug}/users",
 		middleware.RequireOrgMember(verifier, orgs, middleware.RequirePermission(verifier, perms, "users:read", h.ListOrg)))
