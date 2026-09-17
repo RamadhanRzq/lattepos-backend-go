@@ -44,7 +44,7 @@ func Load() (*Config, error) {
 			Port:     getEnv("DB_PORT", "5432"),
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", ""),
-			Name:     getEnv("DB_NAME", "lattepos"),
+			Name:     getEnv("DB_NAME", "lattepos_prod"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 		App: AppConfig{
