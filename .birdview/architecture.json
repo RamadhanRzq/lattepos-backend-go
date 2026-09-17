@@ -2,613 +2,1087 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 1,
+  "revision": 3,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
   },
-  "groups": [
-    {
-      "id": "core",
-      "name": "Application Core",
-      "role": "runtime",
-      "members": ["api-server", "config", "service-auth", "service-user", "jwt-manager"],
-      "evidence": [
-        {
-          "path": "cmd/api/main.go",
-          "line": 41,
-          "endLine": 96,
-          "note": "run() bootstraps config, JWT manager, DB connection, services and the HTTP server; these modules form the execution core."
-        }
-      ]
-    },
-    {
-      "id": "http-api",
-      "name": "HTTP API Layer",
-      "role": "interaction",
-      "members": ["auth-middleware", "handler-auth", "handler-user", "dto", "response-helper"],
-      "evidence": [
-        {
-          "path": "cmd/api/main.go",
-          "line": 72,
-          "endLine": 79,
-          "note": "ServeMux registers the HTTP endpoints served by these modules; they decode requests and write responses for API clients."
-        }
-      ]
-    },
-    {
-      "id": "data",
-      "name": "Data Layer",
-      "role": "generic",
-      "members": ["user-domain", "user-repository", "db-schema"],
-      "evidence": [
-        {
-          "path": "internal/repository/postgres/user_repo.go",
-          "line": 30,
-          "endLine": 74,
-          "note": "Persistence module implements the domain repository contract with SQL against the schema in migrations/."
-        }
-      ]
-    }
-  ],
   "modules": [
     {
       "id": "api-server",
       "role": "backend",
       "name": "API Server",
       "kind": "local",
-      "responsibility": "Bootstraps the application: loads config, opens the PostgreSQL connection, wires repository/services/handlers, registers routes on ServeMux, logs requests and runs graceful shutdown.",
+      "responsibility": "Composition root: loads config, opens the PostgreSQL connection, wires each module's repository/service/handler and serves the assembled router with graceful shutdown.",
       "ownership": [
-        { "kind": "file", "path": "cmd/api/main.go" }
+        {
+          "kind": "file",
+          "path": "cmd/server/main.go"
+        }
       ],
       "evidence": [
-        { "path": "cmd/api/main.go", "symbol": "run", "line": 41, "endLine": 60, "note": "Loads config and opens/pings the database connection." },
-        { "path": "cmd/api/main.go", "line": 64, "endLine": 79, "note": "Wiring: postgres repository -> concrete services -> handlers via domain interfaces; route registration." },
-        { "path": "cmd/api/main.go", "symbol": "srv", "line": 91, "endLine": 130, "note": "HTTP server with request logging, signal handling and graceful shutdown." }
+        {
+          "path": "cmd/server/main.go",
+          "note": "run() loads config, builds the JWT manager and opens the database.",
+          "symbol": "run",
+          "line": 31,
+          "endLine": 44
+        },
+        {
+          "path": "cmd/server/main.go",
+          "note": "Wiring per module: repositories -> services -> handlers, passed to router.New.",
+          "symbol": "run",
+          "line": 46,
+          "endLine": 63
+        },
+        {
+          "path": "cmd/server/main.go",
+          "note": "HTTP server, signal handling and graceful shutdown.",
+          "symbol": "run",
+          "line": 65,
+          "endLine": 103
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 0, "column": 0 }
+      "layout": {
+        "row": 1,
+        "column": 0
+      }
     },
     {
       "id": "config",
       "role": "backend",
       "name": "Config",
       "kind": "local",
-      "responsibility": "Loads application and database configuration from environment variables (.env via godotenv), validates required JWT_SECRET and builds the PostgreSQL DSN.",
+      "responsibility": "Loads application and database configuration from environment variables (.env via godotenv), requires JWT_SECRET and builds the PostgreSQL DSN.",
       "ownership": [
-        { "kind": "directory", "path": "internal/config" }
+        {
+          "kind": "directory",
+          "path": "internal/config"
+        }
       ],
       "evidence": [
-        { "path": "internal/config/config.go", "symbol": "Load", "line": 36, "endLine": 62, "note": "Reads DB_*/PORT/JWT_* env vars, rejects empty JWT_SECRET." },
-        { "path": "internal/config/config.go", "symbol": "DSN", "line": 65, "endLine": 70, "note": "Builds the postgres connection string used by main." }
+        {
+          "path": "internal/config/config.go",
+          "note": "Reads DB_*/PORT/JWT_* env vars and rejects an empty JWT_SECRET.",
+          "symbol": "Load",
+          "line": 36,
+          "endLine": 62
+        },
+        {
+          "path": "internal/config/config.go",
+          "note": "Builds the postgres connection string.",
+          "symbol": "DSN",
+          "line": 65,
+          "endLine": 70
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 0, "column": 1 }
+      "layout": {
+        "row": 0,
+        "column": 0
+      }
     },
     {
-      "id": "service-auth",
-      "role": "security",
-      "name": "Auth Service",
+      "id": "database",
+      "role": "database",
+      "name": "Database Connection",
       "kind": "local",
-      "responsibility": "Implements user.AuthService: verifies username/password with bcrypt (uniform ErrInvalidCredentials to avoid user enumeration) and issues JWT tokens.",
+      "responsibility": "Opens the PostgreSQL connection pool and verifies reachability with a bounded ping; shared infrastructure for every module's postgres repository.",
       "ownership": [
-        { "kind": "file", "path": "internal/service/auth.go" }
+        {
+          "kind": "directory",
+          "path": "internal/database"
+        }
       ],
       "evidence": [
-        { "path": "internal/service/auth.go", "symbol": "AuthService.Login", "line": 27, "endLine": 44, "note": "FindByUsername, bcrypt.CompareHashAndPassword, jwt.Generate." },
-        { "path": "internal/service/auth.go", "symbol": "AuthService.VerifyToken", "line": 52, "endLine": 55, "note": "Delegates token verification to the JWT manager." }
+        {
+          "path": "internal/database/postgres.go",
+          "note": "Open wraps sql.Open plus PingContext with a 5s timeout and closes the pool on ping failure.",
+          "symbol": "Open",
+          "line": 14,
+          "endLine": 31
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 1, "column": 0 }
+      "layout": {
+        "row": 1,
+        "column": 1
+      }
     },
     {
-      "id": "service-user",
+      "id": "http-routes",
       "role": "backend",
-      "name": "User Service",
+      "name": "Router Composition",
       "kind": "local",
-      "responsibility": "Implements user.UserService: list, lookup and registration of users; hashes passwords with bcrypt and defaults new users to the 'cashier' role.",
+      "responsibility": "Assembles the HTTP surface by delegating to each module's RegisterRoutes and wraps the mux with request logging; the only place that knows all modules.",
       "ownership": [
-        { "kind": "file", "path": "internal/service/user.go" }
+        {
+          "kind": "directory",
+          "path": "internal/router"
+        }
       ],
       "evidence": [
-        { "path": "internal/service/user.go", "symbol": "UserService.Create", "line": 44, "endLine": 68, "note": "Validates input, bcrypt hash, Role: \"cashier\", persists via repository." },
-        { "path": "internal/service/user.go", "symbol": "UserService.List", "line": 21, "endLine": 32, "note": "List and GetByID delegate to the repository." }
+        {
+          "path": "internal/router/router.go",
+          "note": "Deps carries the middleware ports and every module handler.",
+          "symbol": "Deps",
+          "line": 14,
+          "endLine": 25
+        },
+        {
+          "path": "internal/router/router.go",
+          "note": "New registers /health and calls each module's RegisterRoutes, then wraps with middleware.Logger.",
+          "symbol": "New",
+          "line": 28,
+          "endLine": 40
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 1, "column": 1 }
+      "layout": {
+        "row": 2,
+        "column": 0
+      }
+    },
+    {
+      "id": "auth-middleware",
+      "role": "security",
+      "name": "HTTP Middleware",
+      "kind": "local",
+      "responsibility": "HTTP guards defined as ports: RequireAuth verifies the bearer token, RequirePermission caches the permission set per request, RequireOrgMember resolves the org and checks membership, Logger records status and latency.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/middleware"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/middleware/auth.go",
+          "note": "TokenVerifier/PermissionChecker ports; RequireAuth injects claims, RequirePermission resolves and caches permissions.",
+          "symbol": "RequirePermission",
+          "line": 46,
+          "endLine": 82
+        },
+        {
+          "path": "internal/middleware/auth.go",
+          "note": "Claims and permission helpers read the injected request context.",
+          "symbol": "ClaimsFromContext",
+          "line": 108,
+          "endLine": 118
+        },
+        {
+          "path": "internal/middleware/org.go",
+          "note": "OrgMembership port; RequireOrgMember resolves slug to org id, checks membership and injects org_id.",
+          "symbol": "RequireOrgMember",
+          "line": 27,
+          "endLine": 72
+        },
+        {
+          "path": "internal/middleware/logger.go",
+          "note": "Logger prints method, path, status and latency.",
+          "symbol": "Logger",
+          "line": 20,
+          "endLine": 28
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 3,
+        "column": 0
+      }
+    },
+    {
+      "id": "auth",
+      "role": "security",
+      "name": "Auth",
+      "kind": "local",
+      "responsibility": "Authenticates users: verifies credentials with bcrypt using one uniform error, issues JWT tokens, and serves /login and /me.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/auth"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/auth/service.go",
+          "note": "Login lowercases the username, compares the bcrypt hash and issues the token.",
+          "symbol": "Service.Login",
+          "line": 29,
+          "endLine": 48
+        },
+        {
+          "path": "internal/modules/auth/service.go",
+          "note": "VerifyToken satisfies middleware.TokenVerifier.",
+          "symbol": "Service.VerifyToken",
+          "line": 55,
+          "endLine": 57
+        },
+        {
+          "path": "internal/modules/auth/handler.go",
+          "note": "Login maps ErrInvalidCredentials to 401 and returns token plus user.",
+          "symbol": "Handler.Login",
+          "line": 28,
+          "endLine": 60
+        },
+        {
+          "path": "internal/modules/auth/routes.go",
+          "note": "Registers /login, /api/v1/login, /me and /api/v1/me.",
+          "symbol": "RegisterRoutes",
+          "line": 11,
+          "endLine": 19
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 0,
+        "column": 1
+      }
+    },
+    {
+      "id": "users",
+      "role": "backend",
+      "name": "Users",
+      "kind": "local",
+      "responsibility": "Owns the user entity, sentinel errors, repository contract and postgres implementation, the registration rules (bcrypt hash, default cashier role) and the /users endpoints, including org-scoped variants.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/users"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/users/model.go",
+          "note": "User entity plus ErrNotFound/ErrInvalidInput/ErrUsernameTaken/ErrEmailTaken.",
+          "symbol": "User",
+          "line": 21,
+          "endLine": 32
+        },
+        {
+          "path": "internal/modules/users/postgres.go",
+          "note": "Postgres implementation with unique-violation mapping to domain errors.",
+          "symbol": "postgresRepository.Create",
+          "line": 73,
+          "endLine": 87
+        },
+        {
+          "path": "internal/modules/users/service.go",
+          "note": "Create validates input, hashes the password and defaults Role to cashier.",
+          "symbol": "Service.Create",
+          "line": 44,
+          "endLine": 69
+        },
+        {
+          "path": "internal/modules/users/handler.go",
+          "note": "List, Create and ByID map domain errors to status codes.",
+          "symbol": "Handler.Create",
+          "line": 36,
+          "endLine": 63
+        },
+        {
+          "path": "internal/modules/users/routes.go",
+          "note": "Registers /users and /api/v1/org/{slug}/users behind the guards.",
+          "symbol": "RegisterRoutes",
+          "line": 11,
+          "endLine": 27
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 1,
+        "column": 2
+      }
+    },
+    {
+      "id": "rbac",
+      "role": "security",
+      "name": "RBAC",
+      "kind": "local",
+      "responsibility": "Owns permission and role entities, their repository contracts and postgres implementation, the permission/role business rules and every role-assignment endpoint, global and org-scoped.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/rbac"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/rbac/repository.go",
+          "note": "PermissionRepository and RoleRepository contracts including assignment queries.",
+          "symbol": "RoleRepository",
+          "line": 12,
+          "endLine": 24
+        },
+        {
+          "path": "internal/modules/rbac/postgres.go",
+          "note": "Postgres implementations for permissions, roles, role_permissions and user_roles.",
+          "symbol": "roleRepository.GetPermissionsByUserID",
+          "line": 205,
+          "endLine": 229
+        },
+        {
+          "path": "internal/modules/rbac/service.go",
+          "note": "Business rules for permissions, roles and assignments; GetUserPermissions feeds the middleware.",
+          "symbol": "Service.AssignPermissionToRole",
+          "line": 114,
+          "endLine": 130
+        },
+        {
+          "path": "internal/modules/rbac/handler.go",
+          "note": "HTTP endpoints map rbac sentinel errors to status codes.",
+          "symbol": "Handler.AssignPermission",
+          "line": 129,
+          "endLine": 160
+        },
+        {
+          "path": "internal/modules/rbac/routes.go",
+          "note": "Registers /permissions, /roles, /users/{id}/roles and the org-scoped role routes.",
+          "symbol": "RegisterRoutes",
+          "line": 11,
+          "endLine": 32
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 2,
+        "column": 2
+      }
+    },
+    {
+      "id": "organizations",
+      "role": "backend",
+      "name": "Organizations",
+      "kind": "local",
+      "responsibility": "Owns organization and membership entities, slug validation, owner provisioning, member add/remove rules, org resolution for the middleware port and org selection that re-issues the JWT with org context.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/organizations"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/organizations/model.go",
+          "note": "Organization/Member entities, sentinel errors and the Repository contract.",
+          "symbol": "Repository",
+          "line": 38,
+          "endLine": 47
+        },
+        {
+          "path": "internal/modules/organizations/service.go",
+          "note": "Create validates the slug, adds the owner as member and assigns the admin role when present.",
+          "symbol": "Service.Create",
+          "line": 29,
+          "endLine": 62
+        },
+        {
+          "path": "internal/modules/organizations/service.go",
+          "note": "ResolveOrgID and IsUserMember satisfy middleware.OrgMembership.",
+          "symbol": "Service.ResolveOrgID",
+          "line": 76,
+          "endLine": 83
+        },
+        {
+          "path": "internal/modules/organizations/handler.go",
+          "note": "SelectOrg verifies membership and issues an org-scoped token.",
+          "symbol": "Handler.SelectOrg",
+          "line": 102,
+          "endLine": 143
+        },
+        {
+          "path": "internal/modules/organizations/routes.go",
+          "note": "Registers organization, selection and member endpoints.",
+          "symbol": "RegisterRoutes",
+          "line": 11,
+          "endLine": 25
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 3,
+        "column": 2
+      }
     },
     {
       "id": "jwt-manager",
       "role": "security",
       "name": "JWT Manager",
       "kind": "local",
-      "responsibility": "Signs HS256 tokens carrying user claims and verifies them, rejecting expired tokens and non-HMAC algorithms.",
+      "responsibility": "Signs HS256 tokens carrying user and optional organization claims and verifies them, rejecting expired tokens and non-HMAC algorithms.",
       "ownership": [
-        { "kind": "directory", "path": "pkg/jwt" }
+        {
+          "kind": "directory",
+          "path": "pkg/jwt"
+        }
       ],
       "evidence": [
-        { "path": "pkg/jwt/jwt.go", "symbol": "Manager.Generate", "line": 39, "endLine": 55, "note": "HS256 signing with Claims (UserID, Username, Email, Name, issuer lattepos)." },
-        { "path": "pkg/jwt/jwt.go", "symbol": "Manager.Verify", "line": 59, "endLine": 82, "note": "ParseWithClaims with WithValidMethods HS256 to prevent algorithm confusion." }
+        {
+          "path": "pkg/jwt/jwt.go",
+          "note": "Claims carry user identity plus optional org_id/org_slug.",
+          "symbol": "Claims",
+          "line": 12,
+          "endLine": 21
+        },
+        {
+          "path": "pkg/jwt/jwt.go",
+          "note": "GenerateWithOrg signs with expiry, issued-at and issuer lattepos.",
+          "symbol": "Manager.GenerateWithOrg",
+          "line": 46,
+          "endLine": 65
+        },
+        {
+          "path": "pkg/jwt/jwt.go",
+          "note": "Verify restricts the signing method to HS256.",
+          "symbol": "Manager.Verify",
+          "line": 67,
+          "endLine": 89
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 2, "column": 0 }
-    },
-    {
-      "id": "auth-middleware",
-      "role": "security",
-      "name": "Auth Middleware",
-      "kind": "local",
-      "responsibility": "RequireAuth validates the Authorization: Bearer header before protected handlers run and injects verified claims into the request context; ClaimsFromContext reads them back.",
-      "ownership": [
-        { "kind": "directory", "path": "internal/middleware" }
-      ],
-      "evidence": [
-        { "path": "internal/middleware/auth_middleware.go", "symbol": "RequireAuth", "line": 19, "endLine": 43, "note": "Bearer prefix check, auth.VerifyToken, context injection, 401 with WWW-Authenticate." },
-        { "path": "internal/middleware/auth_middleware.go", "symbol": "ClaimsFromContext", "line": 46, "endLine": 49, "note": "Typed claims accessor used by AuthHandler.Me." }
-      ],
-      "status": "supported",
-      "openQuestions": [],
-      "layout": { "row": 0, "column": 2 }
-    },
-    {
-      "id": "handler-auth",
-      "role": "backend",
-      "name": "Auth Handler",
-      "kind": "local",
-      "responsibility": "Serves POST /login (credential login, token response) and GET /me (identity from injected claims), mapping domain errors to HTTP status codes.",
-      "ownership": [
-        { "kind": "file", "path": "internal/handler/auth_handler.go" }
-      ],
-      "evidence": [
-        { "path": "internal/handler/auth_handler.go", "symbol": "AuthHandler.Login", "line": 21, "endLine": 51, "note": "Decodes dto.LoginRequest, calls AuthService.Login, returns dto.LoginResponse." },
-        { "path": "internal/handler/auth_handler.go", "symbol": "AuthHandler.Me", "line": 54, "endLine": 65, "note": "Reads middleware claims, returns dto.MeResponse." }
-      ],
-      "status": "supported",
-      "openQuestions": [],
-      "layout": { "row": 0, "column": 3 }
-    },
-    {
-      "id": "handler-user",
-      "role": "backend",
-      "name": "User Handler",
-      "kind": "local",
-      "responsibility": "Serves GET /users, POST /users and GET /users/{id}, mapping domain errors (invalid input, taken username/email, not found) to HTTP status codes.",
-      "ownership": [
-        { "kind": "file", "path": "internal/handler/user_handler.go" }
-      ],
-      "evidence": [
-        { "path": "internal/handler/user_handler.go", "symbol": "UserHandler.Create", "line": 30, "endLine": 56, "note": "Decodes dto.CreateUserRequest, calls UserService.Create, error switch on domain errors." },
-        { "path": "internal/handler/user_handler.go", "symbol": "UserHandler.List", "line": 19, "endLine": 28, "note": "List and UserByID delegate to UserService." }
-      ],
-      "status": "supported",
-      "openQuestions": [],
-      "layout": { "row": 0, "column": 4 }
-    },
-    {
-      "id": "dto",
-      "role": "backend",
-      "name": "DTOs",
-      "kind": "local",
-      "responsibility": "Defines request/response payload shapes for the HTTP API (LoginRequest, LoginResponse, MeResponse, CreateUserRequest).",
-      "ownership": [
-        { "kind": "directory", "path": "internal/dto" }
-      ],
-      "evidence": [
-        { "path": "internal/dto/auth.go", "symbol": "LoginResponse", "line": 14, "endLine": 19, "note": "Embeds user.User; PasswordHash is hidden by the json:\"-\" tag on the entity." },
-        { "path": "internal/dto/user.go", "symbol": "CreateUserRequest", "line": 3, "endLine": 8, "note": "Registration payload." }
-      ],
-      "status": "supported",
-      "openQuestions": [],
-      "layout": { "row": 1, "column": 3 }
+      "layout": {
+        "row": 0,
+        "column": 3
+      }
     },
     {
       "id": "response-helper",
       "role": "backend",
       "name": "Response Helper",
       "kind": "local",
-      "responsibility": "Writes JSON success bodies and plain-text error responses; single place to change the API error format later.",
+      "responsibility": "Writes JSON success bodies and plain-text error responses; the single place to change the API error format.",
       "ownership": [
-        { "kind": "directory", "path": "pkg/response" }
+        {
+          "kind": "directory",
+          "path": "pkg/response"
+        }
       ],
       "evidence": [
-        { "path": "pkg/response/response.go", "symbol": "JSON", "line": 9, "endLine": 15, "note": "Encodes any value with Content-Type application/json." },
-        { "path": "pkg/response/response.go", "symbol": "Error", "line": 20, "endLine": 22, "note": "Currently identical to http.Error by contract comment." }
+        {
+          "path": "pkg/response/response.go",
+          "note": "JSON sets Content-Type and encodes the payload.",
+          "symbol": "JSON",
+          "line": 9,
+          "endLine": 16
+        },
+        {
+          "path": "pkg/response/response.go",
+          "note": "Error delegates to http.Error (plain text).",
+          "symbol": "Error",
+          "line": 20,
+          "endLine": 22
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 1, "column": 4 }
-    },
-    {
-      "id": "user-domain",
-      "role": "backend",
-      "name": "User Domain",
-      "kind": "local",
-      "responsibility": "Owns the User entity, the UserRepository/UserService/AuthService contracts and shared domain errors used across layers.",
-      "ownership": [
-        { "kind": "directory", "path": "internal/domain/user" }
-      ],
-      "evidence": [
-        { "path": "internal/domain/user/repository.go", "symbol": "UserRepository", "line": 24, "endLine": 29, "note": "Storage contract; errors ErrNotFound, ErrInvalidCredentials, ErrUsernameTaken, ErrEmailTaken." },
-        { "path": "internal/domain/user/service.go", "symbol": "AuthService", "line": 12, "endLine": 24, "note": "Service contracts implemented by internal/service." }
-      ],
-      "status": "supported",
-      "openQuestions": [
-        "repository.go:23 comment claims an in-memory implementation at internal/repository, but the tree only contains internal/repository/postgres - stale comment or planned module?"
-      ],
-      "layout": { "row": 0, "column": 6 }
-    },
-    {
-      "id": "user-repository",
-      "role": "database",
-      "name": "User Repository (Postgres)",
-      "kind": "local",
-      "responsibility": "Implements user.UserRepository over database/sql: find by username/id, list, create; translates pq errors (unique violations) into domain errors.",
-      "ownership": [
-        { "kind": "directory", "path": "internal/repository/postgres" }
-      ],
-      "evidence": [
-        { "path": "internal/repository/postgres/user_repo.go", "symbol": "UserRepository", "line": 16, "endLine": 21, "note": "Compile-time check var _ user.UserRepository." },
-        { "path": "internal/repository/postgres/user_repo.go", "symbol": "mapCreateError", "line": 118, "endLine": 130, "note": "Maps pq unique-violation errors to ErrUsernameTaken/ErrEmailTaken." }
-      ],
-      "status": "supported",
-      "openQuestions": [],
-      "layout": { "row": 1, "column": 6 }
+      "layout": {
+        "row": 1,
+        "column": 3
+      }
     },
     {
       "id": "db-schema",
       "role": "database",
       "name": "DB Schema",
       "kind": "local",
-      "responsibility": "SQL migrations defining the users table (UUID id, unique username/email, bcrypt hash, role default 'cashier') and seed data; applied manually via Makefile psql targets.",
+      "responsibility": "SQL migrations and seed data: users, RBAC tables and organization tables with org_id scoping.",
       "ownership": [
-        { "kind": "directory", "path": "migrations" }
+        {
+          "kind": "directory",
+          "path": "migrations"
+        }
       ],
       "evidence": [
-        { "path": "migrations/001_create_users.sql", "line": 5, "endLine": 16, "note": "CREATE TABLE users with defaults matching service/user.go Role assignment." },
-        { "path": "Makefile", "symbol": "migrate", "line": 12, "endLine": 17, "note": "Manual psql-based migration targets, no migration runner in Go code." }
+        {
+          "path": "migrations/001_create_users.sql",
+          "note": "users table with uuid PK and unique username/email.",
+          "line": 4,
+          "endLine": 15
+        },
+        {
+          "path": "migrations/002_create_rbac.sql",
+          "note": "permissions, roles, role_permissions and user_roles.",
+          "line": 4,
+          "endLine": 35
+        },
+        {
+          "path": "migrations/003_create_organizations_up..sql",
+          "note": "organizations, organization_members and org_id columns.",
+          "line": 1,
+          "endLine": 22
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 2, "column": 6 }
+      "layout": {
+        "row": 4,
+        "column": 2
+      }
     },
     {
       "id": "postgresql",
       "role": "database",
       "name": "PostgreSQL",
       "kind": "external",
-      "responsibility": "External relational database storing the users table; reached via lib/pq with the DSN from config.",
+      "responsibility": "Stores users, roles, permissions and organization data.",
       "ownership": [],
       "evidence": [
-        { "path": "cmd/api/main.go", "line": 50, "endLine": 61, "note": "sql.Open(\"postgres\", cfg.DSN()) plus ping with host/port/name from config." },
-        { "path": "migrations/001_create_users.sql", "line": 3, "endLine": 4, "note": "uuid-ossp extension and users table are created in this database." }
+        {
+          "path": "internal/database/postgres.go",
+          "note": "Connection string is built from DB_* environment variables.",
+          "symbol": "Open",
+          "line": 14,
+          "endLine": 31
+        }
       ],
       "status": "supported",
       "openQuestions": [],
-      "layout": { "row": 3, "column": 6 }
+      "layout": {
+        "row": 0,
+        "column": 4
+      }
     }
   ],
   "relationships": [
     {
-      "id": "server-routes-auth",
-      "from": "api-server",
-      "to": "handler-auth",
-      "label": "routes /login and /me",
-      "kind": "request",
-      "visibility": "overview",
-      "evidence": [{ "path": "cmd/api/main.go", "line": 75, "endLine": 76, "note": "mux.HandleFunc POST /login, GET /me." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "server-routes-user",
-      "from": "api-server",
-      "to": "handler-user",
-      "label": "routes /users endpoints",
-      "kind": "request",
-      "visibility": "overview",
-      "evidence": [{ "path": "cmd/api/main.go", "line": 77, "endLine": 79, "note": "GET /users, POST /users, GET /users/{id}." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "server-guards-me",
-      "from": "api-server",
-      "to": "auth-middleware",
-      "label": "guards /me with RequireAuth",
-      "kind": "control",
-      "visibility": "overview",
-      "evidence": [{ "path": "cmd/api/main.go", "line": 76, "note": "middleware.RequireAuth wraps authHandler.Me." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "server-uses-config",
+      "id": "server-loads-config",
       "from": "api-server",
       "to": "config",
-      "label": "loads env config at startup",
+      "label": "loads env configuration",
       "kind": "dependency",
       "visibility": "overview",
-      "evidence": [{ "path": "cmd/api/main.go", "line": 42, "note": "cfg, err := config.Load()."}],
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "cfg, err := config.Load().",
+          "line": 32,
+          "endLine": 35
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
       "id": "server-opens-db",
       "from": "api-server",
-      "to": "postgresql",
-      "label": "opens and pings connection",
+      "to": "database",
+      "label": "opens the connection pool",
       "kind": "dependency",
       "visibility": "overview",
-      "evidence": [{ "path": "cmd/api/main.go", "line": 50, "endLine": 61, "note": "sql.Open(\"postgres\", cfg.DSN()) and PingContext with 5s timeout." }],
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "database.Open(cfg).",
+          "line": 39,
+          "endLine": 42
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "server-wires-services",
+      "id": "database-connects-postgres",
+      "from": "database",
+      "to": "postgresql",
+      "label": "connects and pings",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/database/postgres.go",
+          "note": "sql.Open plus PingContext.",
+          "symbol": "Open",
+          "line": 14,
+          "endLine": 31
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "server-assembles-router",
       "from": "api-server",
-      "to": "service-auth",
-      "label": "constructs AuthService, passes to middleware",
+      "to": "http-routes",
+      "label": "passes wired handlers",
+      "kind": "dependency",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "router.New(router.Deps{...}).",
+          "line": 58,
+          "endLine": 63
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "server-wires-auth",
+      "from": "api-server",
+      "to": "auth",
+      "label": "constructs auth service and handler",
       "kind": "dependency",
       "visibility": "detail",
-      "evidence": [{ "path": "cmd/api/main.go", "line": 66, "endLine": 76, "note": "service.NewAuthService(userRepo, jwtManager); RequireAuth(authSvc, ...)."}],
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "auth.NewService(userRepo, jwtManager) and auth.NewHandler(authSvc).",
+          "line": 50,
+          "endLine": 60
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "auth-handler-calls-auth-service",
-      "from": "handler-auth",
-      "to": "service-auth",
-      "label": "login and token expiry via AuthService",
-      "kind": "request",
-      "visibility": "overview",
-      "evidence": [{ "path": "internal/handler/auth_handler.go", "line": 35, "endLine": 48, "note": "h.Auth.Login and h.Auth.TokenExpiration." }],
+      "id": "server-wires-users",
+      "from": "api-server",
+      "to": "users",
+      "label": "constructs user repository, service and handler",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "users.NewRepository, users.NewService, users.NewHandler.",
+          "line": 46,
+          "endLine": 59
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "user-handler-calls-user-service",
-      "from": "handler-user",
-      "to": "service-user",
-      "label": "list/create/get via UserService",
+      "id": "server-wires-rbac",
+      "from": "api-server",
+      "to": "rbac",
+      "label": "constructs rbac repositories, service and handler",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "rbac.NewPermissionRepository, NewRoleRepository, NewService, NewHandler.",
+          "line": 47,
+          "endLine": 61
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "server-wires-organizations",
+      "from": "api-server",
+      "to": "organizations",
+      "label": "constructs org repository, service and handler",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "organizations.NewRepository, NewService, NewHandler.",
+          "line": 49,
+          "endLine": 62
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-modules",
+      "from": "http-routes",
+      "to": "auth",
+      "label": "auth registers its own routes",
       "kind": "request",
       "visibility": "overview",
-      "evidence": [{ "path": "internal/handler/user_handler.go", "line": 20, "endLine": 65, "note": "h.Service.List, h.Service.Create, h.Service.GetByID." }],
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "auth.RegisterRoutes(mux, deps.Auth, deps.Verifier).",
+          "line": 34,
+          "endLine": 34
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-users",
+      "from": "http-routes",
+      "to": "users",
+      "label": "users registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "users.RegisterRoutes(mux, ...).",
+          "line": 35,
+          "endLine": 35
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-rbac",
+      "from": "http-routes",
+      "to": "rbac",
+      "label": "rbac registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "rbac.RegisterRoutes(mux, ...).",
+          "line": 36,
+          "endLine": 36
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-organizations",
+      "from": "http-routes",
+      "to": "organizations",
+      "label": "organizations registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "organizations.RegisterRoutes(mux, ...).",
+          "line": 37,
+          "endLine": 37
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-uses-middleware",
+      "from": "http-routes",
+      "to": "auth-middleware",
+      "label": "passes guard ports to modules",
+      "kind": "control",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "Deps carries Verifier, Permissions and Orgs ports.",
+          "symbol": "Deps",
+          "line": 14,
+          "endLine": 25
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
       "id": "middleware-verifies-token",
       "from": "auth-middleware",
-      "to": "service-auth",
-      "label": "verifies Bearer token via AuthService",
+      "to": "auth",
+      "label": "verifies the bearer token through the port",
       "kind": "request",
       "visibility": "overview",
-      "evidence": [{ "path": "internal/middleware/auth_middleware.go", "line": 32, "endLine": 36, "note": "auth.VerifyToken(tokenString); 401 on error." }],
+      "evidence": [
+        {
+          "path": "internal/middleware/auth.go",
+          "note": "TokenVerifier.VerifyToken is satisfied by the auth service.",
+          "symbol": "TokenVerifier",
+          "line": 12,
+          "endLine": 16
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "auth-handler-reads-claims",
-      "from": "handler-auth",
-      "to": "auth-middleware",
-      "label": "reads injected claims via ClaimsFromContext",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/handler/auth_handler.go", "line": 55, "note": "middleware.ClaimsFromContext(r.Context())."}],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "auth-service-finds-user",
-      "from": "service-auth",
-      "to": "user-repository",
-      "label": "loads user by username via UserRepository",
-      "kind": "request",
-      "visibility": "overview",
-      "evidence": [{ "path": "internal/service/auth.go", "line": 30, "note": "s.users.FindByUsername(ctx, username)."}],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "user-service-uses-repo",
-      "from": "service-user",
-      "to": "user-repository",
-      "label": "queries and persists users",
-      "kind": "request",
-      "visibility": "overview",
-      "evidence": [{ "path": "internal/service/user.go", "line": 22, "endLine": 65, "note": "s.users.List / FindByID / Create." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "auth-service-uses-jwt",
-      "from": "service-auth",
-      "to": "jwt-manager",
-      "label": "generates and verifies tokens",
-      "kind": "request",
-      "visibility": "overview",
-      "evidence": [{ "path": "internal/service/auth.go", "line": 39, "endLine": 55, "note": "s.jwt.Generate and s.jwt.Verify." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "middleware-uses-jwt-claims",
+      "id": "middleware-checks-permission",
       "from": "auth-middleware",
-      "to": "jwt-manager",
-      "label": "types context values with jwt Claims",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/middleware/auth_middleware.go", "line": 9, "endLine": 47, "note": "appjwt import; ClaimsFromContext returns *appjwt.Claims." }],
+      "to": "rbac",
+      "label": "resolves the permission set through the port",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/middleware/auth.go",
+          "note": "PermissionChecker.GetUserPermissions is satisfied by the rbac service.",
+          "symbol": "PermissionChecker",
+          "line": 19,
+          "endLine": 22
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "repo-implements-contract",
-      "from": "user-repository",
-      "to": "user-domain",
-      "label": "implements UserRepository contract",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/repository/postgres/user_repo.go", "line": 21, "note": "var _ user.UserRepository = (*UserRepository)(nil)."}],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "auth-service-uses-domain",
-      "from": "service-auth",
-      "to": "user-domain",
-      "label": "consumes entity and domain errors",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/service/auth.go", "line": 32, "endLine": 36, "note": "user.ErrInvalidCredentials, returns user.User." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "user-service-uses-domain",
-      "from": "service-user",
-      "to": "user-domain",
-      "label": "consumes entity and domain errors",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/service/user.go", "line": 53, "endLine": 56, "note": "user.ErrInvalidInput; constructs user.User with Role cashier." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "domain-uses-jwt-claims",
-      "from": "user-domain",
-      "to": "jwt-manager",
-      "label": "AuthService contract references Claims",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/domain/user/service.go", "line": 14, "note": "VerifyToken returns *appjwt.Claims." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "auth-handler-uses-domain-errors",
-      "from": "handler-auth",
-      "to": "user-domain",
-      "label": "maps ErrInvalidCredentials to 401",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/handler/auth_handler.go", "line": 37, "endLine": 39, "note": "errors.Is(err, user.ErrInvalidCredentials)."}],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "user-handler-uses-domain-errors",
-      "from": "handler-user",
-      "to": "user-domain",
-      "label": "maps domain errors to 400/404/409",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/handler/user_handler.go", "line": 42, "endLine": 47, "note": "ErrInvalidInput, ErrUsernameTaken, ErrEmailTaken, ErrNotFound." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "auth-handler-uses-dto",
-      "from": "handler-auth",
-      "to": "dto",
-      "label": "decodes/encodes auth payloads",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/handler/auth_handler.go", "line": 22, "endLine": 51, "note": "dto.LoginRequest decode, dto.LoginResponse and dto.MeResponse encode." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "user-handler-uses-dto",
-      "from": "handler-user",
-      "to": "dto",
-      "label": "decodes CreateUserRequest",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/handler/user_handler.go", "line": 31, "endLine": 39, "note": "json decode into dto.CreateUserRequest." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "dto-uses-entity",
-      "from": "dto",
-      "to": "user-domain",
-      "label": "embeds User entity in responses",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/dto/auth.go", "line": 18, "note": "LoginResponse.User is user.User (PasswordHash hidden by json tag)."}],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "auth-handler-uses-response",
-      "from": "handler-auth",
-      "to": "response-helper",
-      "label": "writes JSON and errors",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/handler/auth_handler.go", "line": 38, "endLine": 60, "note": "response.Error and response.JSON calls." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "user-handler-uses-response",
-      "from": "handler-user",
-      "to": "response-helper",
-      "label": "writes JSON and errors",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/handler/user_handler.go", "line": 22, "endLine": 70, "note": "response.Error and response.JSON calls." }],
-      "status": "supported",
-      "openQuestions": []
-    },
-    {
-      "id": "middleware-uses-response",
+      "id": "middleware-checks-membership",
       "from": "auth-middleware",
-      "to": "response-helper",
-      "label": "writes 401 errors",
-      "kind": "dependency",
-      "visibility": "detail",
-      "evidence": [{ "path": "internal/middleware/auth_middleware.go", "line": 35, "endLine": 38, "note": "response.Error with WWW-Authenticate header." }],
+      "to": "organizations",
+      "label": "resolves org and membership through the port",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/middleware/org.go",
+          "note": "OrgMembership.ResolveOrgID and IsUserMember are satisfied by the organizations service.",
+          "symbol": "OrgMembership",
+          "line": 13,
+          "endLine": 17
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "repo-queries-db",
-      "from": "user-repository",
+      "id": "auth-reads-users",
+      "from": "auth",
+      "to": "users",
+      "label": "verifies credentials via the user repository",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/auth/service.go",
+          "note": "s.users.FindByUsername(ctx, username).",
+          "line": 33,
+          "endLine": 38
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "auth-issues-token",
+      "from": "auth",
+      "to": "jwt-manager",
+      "label": "issues and verifies tokens",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/auth/service.go",
+          "note": "s.jwt.Generate and s.jwt.Verify.",
+          "line": 40,
+          "endLine": 57
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "users-query-postgres",
+      "from": "users",
       "to": "postgresql",
-      "label": "executes SQL on users table",
+      "label": "reads and writes the users table",
       "kind": "request",
       "visibility": "overview",
-      "evidence": [{ "path": "internal/repository/postgres/user_repo.go", "line": 31, "endLine": 74, "note": "SELECT/INSERT against users via *sql.DB." }],
+      "evidence": [
+        {
+          "path": "internal/modules/users/postgres.go",
+          "note": "SQL statements against users executed through *sql.DB.",
+          "symbol": "postgresRepository.Create",
+          "line": 73,
+          "endLine": 87
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "repo-uses-schema",
-      "from": "user-repository",
-      "to": "db-schema",
-      "label": "relies on users table columns",
+      "id": "rbac-query-postgres",
+      "from": "rbac",
+      "to": "postgresql",
+      "label": "reads and writes rbac tables",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/rbac/postgres.go",
+          "note": "SQL against permissions, roles, role_permissions and user_roles.",
+          "symbol": "roleRepository.AssignRoleToUser",
+          "line": 187,
+          "endLine": 199
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "organizations-query-postgres",
+      "from": "organizations",
+      "to": "postgresql",
+      "label": "reads and writes organization tables",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/organizations/postgres.go",
+          "note": "Prepared statements against organizations and organization_members.",
+          "symbol": "postgresRepository.IsMember",
+          "line": 187,
+          "endLine": 194
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "organizations-assign-owner-role",
+      "from": "organizations",
+      "to": "rbac",
+      "label": "assigns the admin role to the owner",
+      "kind": "request",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/organizations/service.go",
+          "note": "roleRepo.FindByName(\"admin\") then AssignRoleToUser.",
+          "line": 53,
+          "endLine": 60
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "organizations-return-member-users",
+      "from": "organizations",
+      "to": "users",
+      "label": "returns member user entities",
       "kind": "dependency",
       "visibility": "detail",
-      "evidence": [{ "path": "internal/repository/postgres/user_repo.go", "line": 28, "endLine": 31, "note": "userColumns matches migrations/001_create_users.sql." }],
+      "evidence": [
+        {
+          "path": "internal/modules/organizations/model.go",
+          "note": "ListMembers returns []users.User.",
+          "symbol": "Repository",
+          "line": 38,
+          "endLine": 47
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     },
     {
-      "id": "schema-applies-to-db",
+      "id": "modules-apply-schema",
       "from": "db-schema",
       "to": "postgresql",
-      "label": "DDL defines users table",
+      "label": "creates the tables the modules query",
       "kind": "dependency",
       "visibility": "detail",
-      "evidence": [{ "path": "migrations/001_create_users.sql", "line": 5, "endLine": 16, "note": "CREATE TABLE users applied via Makefile psql targets." }],
+      "evidence": [
+        {
+          "path": "migrations/003_create_organizations_up..sql",
+          "note": "CREATE TABLE/ALTER TABLE applied by the Makefile migrate targets.",
+          "line": 1,
+          "endLine": 22
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "modules-encode-contracts",
+      "from": "auth",
+      "to": "response-helper",
+      "label": "writes JSON and error bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/auth/handler.go",
+          "note": "response.JSON / response.Error.",
+          "line": 28,
+          "endLine": 80
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "users-write-response",
+      "from": "users",
+      "to": "response-helper",
+      "label": "writes JSON and error bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/users/handler.go",
+          "note": "response.JSON / response.Error.",
+          "line": 22,
+          "endLine": 82
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "rbac-writes-response",
+      "from": "rbac",
+      "to": "response-helper",
+      "label": "writes JSON and error bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/rbac/handler.go",
+          "note": "response.JSON / response.Error.",
+          "line": 17,
+          "endLine": 214
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "organizations-write-response",
+      "from": "organizations",
+      "to": "response-helper",
+      "label": "writes JSON and error bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/organizations/handler.go",
+          "note": "response.JSON / response.Error.",
+          "line": 24,
+          "endLine": 236
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "middleware-writes-response",
+      "from": "auth-middleware",
+      "to": "response-helper",
+      "label": "writes 401/403 bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/middleware/auth.go",
+          "note": "response.Error for unauthorized and forbidden.",
+          "line": 53,
+          "endLine": 79
+        }
+      ],
       "status": "supported",
       "openQuestions": []
     }

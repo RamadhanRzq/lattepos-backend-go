@@ -52,20 +52,20 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO roles (name, description, org_id) VALUES
 ('admin', 'Administrator global dengan akses penuh', NULL),
 ('cashier', 'Kasir global dengan akses terbatas', NULL)
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- Seed org-scoped roles (contoh untuk lattepos-central)
 INSERT INTO roles (name, description, org_id)
 SELECT 'org-admin', 'Administrator organisasi lattepos-central', o.id
 FROM organizations o
 WHERE o.slug = 'lattepos-central'
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 INSERT INTO roles (name, description, org_id)
 SELECT 'org-cashier', 'Kasir organisasi lattepos-central', o.id
 FROM organizations o
 WHERE o.slug = 'lattepos-central'
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 -- Seed role_permissions
 -- Admin role (global & org-scoped): semua permission
@@ -83,11 +83,11 @@ WHERE r.name IN ('cashier', 'org-cashier') AND p.name = 'users:read'
 ON CONFLICT DO NOTHING;
 
 -- Seed user_roles (dengan org_id scoping)
--- Admin -> role 'admin' & 'org-admin' di lattepos-central
+-- Admin -> role global 'admin' (berlaku di semua organisasi)
 INSERT INTO user_roles (user_id, role_id, org_id)
-SELECT u.id, r.id, o.id
-FROM users u, roles r, organizations o
-WHERE u.username = 'admin' AND r.name = 'admin' AND o.slug = 'lattepos-central'
+SELECT u.id, r.id, NULL
+FROM users u, roles r
+WHERE u.username = 'admin' AND r.name = 'admin' AND r.org_id IS NULL
 ON CONFLICT DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id, org_id)
@@ -96,11 +96,11 @@ FROM users u, roles r, organizations o
 WHERE u.username = 'admin' AND r.name = 'org-admin' AND o.slug = 'lattepos-central'
 ON CONFLICT DO NOTHING;
 
--- Kasir1 -> role 'cashier' & 'org-cashier' di lattepos-central
+-- Kasir1 -> role global 'cashier' (berlaku di semua organisasi)
 INSERT INTO user_roles (user_id, role_id, org_id)
-SELECT u.id, r.id, o.id
-FROM users u, roles r, organizations o
-WHERE u.username = 'kasir1' AND r.name = 'cashier' AND o.slug = 'lattepos-central'
+SELECT u.id, r.id, NULL
+FROM users u, roles r
+WHERE u.username = 'kasir1' AND r.name = 'cashier' AND r.org_id IS NULL
 ON CONFLICT DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id, org_id)

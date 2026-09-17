@@ -5,27 +5,31 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ramadhanrzq/backend-go/internal/domain/organization"
-	"github.com/ramadhanrzq/backend-go/internal/domain/user"
 	"github.com/ramadhanrzq/backend-go/pkg/response"
 )
 
-const orgContextKey contextKey = "org"
+// OrgMembership adalah port yang dibutuhkan middleware untuk resolusi organisasi
+// dan pemeriksaan keanggotaan. Dipenuhi oleh service module organizations.
+type OrgMembership interface {
+	ResolveOrgID(ctx context.Context, slug string) (string, error)
+	IsUserMember(ctx context.Context, orgID, userID string) (bool, error)
+}
 
-// RequireOrgMember memvalidasi JWT dan keanggotaan user dalam organisasi berdasarkan path slug atau JWT claims.
-func RequireOrgMember(authSvc user.AuthService, orgSvc organization.OrgService, next http.HandlerFunc) http.HandlerFunc {
+const (
+	orgIDContextKey   contextKey = "org_id"
+	orgSlugContextKey contextKey = "org_slug"
+)
+
+// RequireOrgMember memvalidasi JWT dan keanggotaan user dalam organisasi
+// berdasarkan path slug atau JWT claims.
+func RequireOrgMember(auth TokenVerifier, orgs OrgMembership, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, ok := ClaimsFromContext(r.Context())
 		if !ok {
 			var err error
-			claims, err = authenticate(authSvc, r)
+			claims, err = authenticate(auth, r)
 			if err != nil {
-				if strings.Contains(err.Error(), "header") {
-					w.Header().Set("WWW-Authenticate", `Bearer realm="lattepos"`)
-				} else {
-					w.Header().Set("WWW-Authenticate", `Bearer realm="lattepos", error="invalid_token"`)
-				}
-				response.Error(w, http.StatusUnauthorized, err.Error())
+				writeUnauthorized(w, err)
 				return
 			}
 			r = r.WithContext(context.WithValue(r.Context(), claimsContextKey, claims))
@@ -41,25 +45,26 @@ func RequireOrgMember(authSvc user.AuthService, orgSvc organization.OrgService, 
 			return
 		}
 
-		org, err := orgSvc.GetBySlug(r.Context(), slug)
+		orgID, err := orgs.ResolveOrgID(r.Context(), slug)
 		if err != nil {
 			response.Error(w, http.StatusNotFound, "Organization not found")
 			return
 		}
 
-		isMember, err := orgSvc.IsUserMember(r.Context(), org.ID, claims.UserID)
+		isMember, err := orgs.IsUserMember(r.Context(), orgID, claims.UserID)
 		if err != nil || !isMember {
 			response.Error(w, http.StatusForbidden, "Forbidden: you are not a member of this organization")
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), orgContextKey, org)
+		ctx := context.WithValue(r.Context(), orgIDContextKey, orgID)
+		ctx = context.WithValue(ctx, orgSlugContextKey, slug)
 		next(w, r.WithContext(ctx))
 	}
 }
 
-// OrgFromContext mengambil entity organization yang tersuntik oleh RequireOrgMember.
-func OrgFromContext(ctx context.Context) (*organization.Organization, bool) {
-	org, ok := ctx.Value(orgContextKey).(*organization.Organization)
-	return org, ok
+// OrgIDFromContext mengambil ID organisasi yang tersuntik oleh RequireOrgMember.
+func OrgIDFromContext(ctx context.Context) (string, bool) {
+	id, ok := ctx.Value(orgIDContextKey).(string)
+	return id, ok
 }
