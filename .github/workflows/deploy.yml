@@ -7,10 +7,14 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ramadhanrzq/lattepos-backend-go
+
 jobs:
-  build:
-    # Native aarch64 runner: no QEMU, GOARCH=arm64 by default.
+  test:
     runs-on: ubuntu-24.04-arm
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,16 +23,76 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - run: gofmt -l internal/ cmd/ pkg/
-      - run: go vet ./...
-      - run: go test ./...
+      - name: Check formatting
+        run: |
+          test -z "$(gofmt -l internal/ cmd/ pkg/)"
 
-      - run: go build -o lattepos ./cmd/server
-      - run: file lattepos
+      - name: Vet
+        run: go vet ./...
 
-      - uses: actions/upload-artifact@v4
+      - name: Test
+        run: go test ./...
+
+  docker:
+    needs: test
+
+    # Docker build/push dilakukan hanya untuk push ke main atau tag.
+    if: github.event_name == 'push'
+
+    runs-on: ubuntu-24.04-arm
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          name: lattepos-linux-arm64
-          path: lattepos
-          # add when binary needs to reach a server:
-          # deploy via scp/ssh below needs SSH_HOST/SSH_USER/SSH_KEY secrets
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: docker
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/lattepos
+
+            docker compose pull
+            docker compose up -d --remove-orphans
+
+            docker image prune -f
+
+            docker compose ps
