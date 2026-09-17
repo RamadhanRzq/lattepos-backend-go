@@ -8,6 +8,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/auth"
 	"github.com/ramadhanrzq/backend-go/internal/modules/organizations"
 	"github.com/ramadhanrzq/backend-go/internal/modules/rbac"
+	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
 	"github.com/ramadhanrzq/backend-go/internal/modules/users"
 )
 
@@ -22,6 +23,7 @@ type Deps struct {
 	Users         *users.Handler
 	RBAC          *rbac.Handler
 	Organizations *organizations.Handler
+	Stores        *stores.Handler
 }
 
 // New merangkai route semua module menjadi satu http.Handler.
@@ -34,7 +36,7 @@ func New(deps Deps) http.Handler {
 	users.RegisterRoutes(mux, deps.Users, deps.Verifier, deps.Permissions, deps.Orgs)
 	rbac.RegisterRoutes(mux, deps.RBAC, deps.Verifier, deps.Permissions, deps.Orgs)
 	organizations.RegisterRoutes(mux, deps.Organizations, deps.Verifier, deps.Orgs)
-
+	stores.RegisterRoutes(mux, deps.Stores, deps.Verifier, deps.Orgs)
 	return middleware.Logger(mux)
 }
 

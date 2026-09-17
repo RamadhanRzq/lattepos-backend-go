@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 3,
+  "revision": 4,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -496,7 +496,7 @@
       "role": "database",
       "name": "DB Schema",
       "kind": "local",
-      "responsibility": "SQL migrations and seed data: users, RBAC tables and organization tables with org_id scoping.",
+      "responsibility": "SQL migrations and seed data: users, RBAC tables, organization tables with org_id scoping, plus stores and user_stores pivot.",
       "ownership": [
         {
           "kind": "directory",
@@ -521,6 +521,12 @@
           "note": "organizations, organization_members and org_id columns.",
           "line": 1,
           "endLine": 22
+        },
+        {
+          "path": "migrations/005_create_stores_up.sql",
+          "note": "stores plus user_stores with same-org FKs and indexes.",
+          "line": 1,
+          "endLine": 30
         }
       ],
       "status": "supported",
@@ -551,6 +557,55 @@
       "layout": {
         "row": 0,
         "column": 4
+      }
+    },
+    {
+      "id": "stores",
+      "role": "backend",
+      "name": "Stores",
+      "kind": "local",
+      "responsibility": "Owns store and user-store-access entities, org-scoped CRUD plus activate/deactivate, same-org assignment rules with duplicate rejection, and org-scoped HTTP endpoints behind RequireOrgMember.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/stores"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/stores/model.go",
+          "note": "Store/UserStore entities, sentinel errors and Repository contract.",
+          "symbol": "Repository",
+          "line": 30,
+          "endLine": 42
+        },
+        {
+          "path": "internal/modules/stores/service.go",
+          "note": "Create/Update/Activate/List enforce org boundary; AssignUser checks same-org plus duplicate.",
+          "symbol": "Service.AssignUser",
+          "line": 80,
+          "endLine": 110
+        },
+        {
+          "path": "internal/modules/stores/handler.go",
+          "note": "Handlers read org from RequireOrgMember context, never trust client organization_id.",
+          "symbol": "Handler.AssignUser",
+          "line": 120,
+          "endLine": 150
+        },
+        {
+          "path": "internal/modules/stores/routes.go",
+          "note": "Registers /api/v1/org/{slug}/stores and user-store access routes.",
+          "symbol": "RegisterRoutes",
+          "line": 10,
+          "endLine": 30
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 2,
+        "column": 1
       }
     }
   ],
@@ -1081,6 +1136,134 @@
           "note": "response.Error for unauthorized and forbidden.",
           "line": 53,
           "endLine": 79
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "server-wires-stores",
+      "from": "api-server",
+      "to": "stores",
+      "label": "constructs store repository, service and handler",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "stores.NewRepository, NewService, NewHandler.",
+          "line": 50,
+          "endLine": 62
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-stores",
+      "from": "http-routes",
+      "to": "stores",
+      "label": "stores registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "stores.RegisterRoutes(mux, ...).",
+          "line": 37,
+          "endLine": 37
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "stores-query-postgres",
+      "from": "stores",
+      "to": "postgresql",
+      "label": "reads and writes stores and user_stores",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/stores/postgres.go",
+          "note": "SQL against stores and user_stores through *sql.DB.",
+          "symbol": "postgresRepository.AssignUser",
+          "line": 150,
+          "endLine": 170
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "stores-checks-membership",
+      "from": "stores",
+      "to": "organizations",
+      "label": "validates org boundary and membership",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/stores/service.go",
+          "note": "AssignUser/List enforce same-org via org service membership.",
+          "line": 80,
+          "endLine": 110
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "stores-returns-member-users",
+      "from": "stores",
+      "to": "users",
+      "label": "returns member user entities",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/stores/model.go",
+          "note": "ListStoreUsers returns []users.User.",
+          "symbol": "Repository",
+          "line": 30,
+          "endLine": 42
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "stores-uses-org-context",
+      "from": "stores",
+      "to": "auth-middleware",
+      "label": "reads org context from RequireOrgMember",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/stores/handler.go",
+          "note": "middleware.OrgIDFromContext supplies tenant boundary.",
+          "line": 30,
+          "endLine": 45
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "stores-writes-response",
+      "from": "stores",
+      "to": "response-helper",
+      "label": "writes JSON and error bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/stores/handler.go",
+          "note": "response.JSON / response.Error.",
+          "line": 20,
+          "endLine": 180
         }
       ],
       "status": "supported",
