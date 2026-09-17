@@ -108,3 +108,33 @@ SELECT u.id, r.id, o.id
 FROM users u, roles r, organizations o
 WHERE u.username = 'kasir1' AND r.name = 'org-cashier' AND o.slug = 'lattepos-central'
 ON CONFLICT DO NOTHING;
+
+-- Seed stores (requires 005_create_stores_up.sql)
+INSERT INTO stores (organization_id, name, code, address, phone)
+SELECT o.id, v.name, v.code, v.address, v.phone
+FROM organizations o
+JOIN (VALUES
+    ('lattepos-central', 'Central - Sudirman', 'CBD-01', 'Jl. Sudirman No. 1, Jakarta', '021-111111'),
+    ('lattepos-central', 'Central - Kemang', 'KMG-01', 'Jl. Kemang No. 8, Jakarta', '021-222222'),
+    ('lattepos-branch-one', 'Branch One - Utama', 'BR1-01', 'Jl. Merdeka No. 5, Bandung', '022-333333')
+) AS v(slug, name, code, address, phone) ON o.slug = v.slug
+ON CONFLICT (organization_id, code) DO NOTHING;
+
+-- Seed user_stores
+-- Admin: anggota kedua organisasi, akses ke semua store (multi-store)
+INSERT INTO user_stores (user_id, store_id)
+SELECT u.id, s.id
+FROM users u, stores s, organizations o, organization_members m
+WHERE u.username = 'admin'
+AND s.organization_id = o.id
+AND m.user_id = u.id AND m.org_id = o.id
+ON CONFLICT (user_id, store_id) DO NOTHING;
+
+-- Kasir1: hanya store lattepos-central (same-org via membership join)
+INSERT INTO user_stores (user_id, store_id)
+SELECT u.id, s.id
+FROM users u, stores s, organizations o, organization_members m
+WHERE u.username = 'kasir1' AND o.slug = 'lattepos-central'
+AND s.organization_id = o.id
+AND m.user_id = u.id AND m.org_id = o.id
+ON CONFLICT (user_id, store_id) DO NOTHING;
