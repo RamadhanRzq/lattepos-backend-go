@@ -1,0 +1,34 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    # Native aarch64 runner: no QEMU, GOARCH=arm64 by default.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - run: gofmt -l internal/ cmd/ pkg/
+      - run: go vet ./...
+      - run: go test ./...
+
+      - run: go build -o lattepos ./cmd/server
+      - run: file lattepos
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lattepos-linux-arm64
+          path: lattepos
+          # add when binary needs to reach a server:
+          # deploy via scp/ssh below needs SSH_HOST/SSH_USER/SSH_KEY secrets
