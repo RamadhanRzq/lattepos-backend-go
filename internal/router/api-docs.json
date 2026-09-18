@@ -1,87 +1,1686 @@
-[
-  {
-    "name": "Health",
-    "endpoints": [
-      {"method": "GET", "path": "/api/v1/health", "auth": "publik", "desc": "Liveness aplikasi"}
+{
+  "info": {
+    "_postman_id": "lattepos-backend-api",
+    "name": "LattePOS API",
+    "description": "LattePOS Backend API. Pilih environment value `baseUrl` sesuai server. Login/register lalu isi `token` (collection bearer). `{slug}` dkk sudah jadi path variable — isi via Params.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
     ]
   },
-  {
-    "name": "Auth",
-    "endpoints": [
-      {"method": "POST", "path": "/api/v1/register", "auth": "publik", "desc": "Registrasi user baru → JWT langsung"},
-      {"method": "POST", "path": "/api/v1/login", "auth": "publik", "desc": "Login username+password → JWT"},
-      {"method": "GET", "path": "/api/v1/me", "auth": "Bearer", "desc": "Profil user dari token"}
-    ]
-  },
-  {
-    "name": "Users",
-    "endpoints": [
-      {"method": "GET", "path": "/api/v1/users", "auth": "users:read", "desc": "List user global"},
-      {"method": "POST", "path": "/api/v1/users", "auth": "users:create", "desc": "Buat user"},
-      {"method": "GET", "path": "/api/v1/users/{id}", "auth": "users:read", "desc": "Detail user"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/users", "auth": "org+users:read", "desc": "List user satu organisasi"},
-      {"method": "POST", "path": "/api/v1/org/{slug}/users", "auth": "org+users:create", "desc": "Buat user dalam organisasi"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/users/{id}", "auth": "org+users:read", "desc": "Detail user dalam organisasi"}
-    ]
-  },
-  {
-    "name": "RBAC",
-    "endpoints": [
-      {"method": "GET", "path": "/api/v1/permissions", "auth": "permissions:read", "desc": "List permission"},
-      {"method": "POST", "path": "/api/v1/permissions", "auth": "permissions:create", "desc": "Buat permission"},
-      {"method": "GET", "path": "/api/v1/roles", "auth": "roles:read", "desc": "List role global"},
-      {"method": "POST", "path": "/api/v1/roles", "auth": "roles:create", "desc": "Buat role global"},
-      {"method": "GET", "path": "/api/v1/roles/{id}", "auth": "roles:read", "desc": "Detail role global"},
-      {"method": "POST", "path": "/api/v1/roles/{id}/permissions", "auth": "roles:update", "desc": "Tambah permission ke role"},
-      {"method": "POST", "path": "/api/v1/users/{id}/roles", "auth": "users:update", "desc": "Tambah role ke user"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/roles", "auth": "org+roles:read", "desc": "List role organisasi"},
-      {"method": "POST", "path": "/api/v1/org/{slug}/roles", "auth": "org+roles:create", "desc": "Buat role organisasi"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/roles/{id}", "auth": "org+roles:read", "desc": "Detail role organisasi"},
-      {"method": "POST", "path": "/api/v1/org/{slug}/roles/{id}/permissions", "auth": "roles:update", "desc": "Tambah permission ke role organisasi"},
-      {"method": "POST", "path": "/api/v1/org/{slug}/users/{id}/roles", "auth": "org+users:update", "desc": "Tambah role organisasi ke user"}
-    ]
-  },
-  {
-    "name": "Organizations",
-    "endpoints": [
-      {"method": "POST", "path": "/api/v1/organizations", "auth": "Bearer", "desc": "Buat organisasi (pembuat jadi owner)"},
-      {"method": "GET", "path": "/api/v1/organizations", "auth": "Bearer", "desc": "List organisasi"},
-      {"method": "GET", "path": "/api/v1/org/{slug}", "auth": "Bearer", "desc": "Detail organisasi"},
-      {"method": "POST", "path": "/api/v1/org/{slug}/auth/select", "auth": "Bearer", "desc": "Pilih organisasi aktif → token berkonteks org"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/members", "auth": "org", "desc": "List member organisasi"},
-      {"method": "POST", "path": "/api/v1/org/{slug}/members", "auth": "org", "desc": "Tambah member"},
-      {"method": "DELETE", "path": "/api/v1/org/{slug}/members/{uid}", "auth": "org", "desc": "Hapus member"}
-    ]
-  },
-  {
-    "name": "Stores",
-    "endpoints": [
-      {"method": "POST", "path": "/api/v1/org/{slug}/stores", "auth": "org", "desc": "Buat store"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/stores", "auth": "org", "desc": "List store organisasi"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{id}", "auth": "org", "desc": "Detail store"},
-      {"method": "PUT", "path": "/api/v1/org/{slug}/stores/{id}", "auth": "org", "desc": "Ubah store penuh"},
-      {"method": "PATCH", "path": "/api/v1/org/{slug}/stores/{id}/status", "auth": "org", "desc": "Aktif/nonaktif store"},
-      {"method": "POST", "path": "/api/v1/org/{slug}/stores/{id}/users", "auth": "org", "desc": "Beri user akses ke store"},
-      {"method": "DELETE", "path": "/api/v1/org/{slug}/stores/{id}/users/{userId}", "auth": "org", "desc": "Cabut akses user dari store"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{id}/users", "auth": "org", "desc": "List user yang punya akses ke store"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/users/{id}/stores", "auth": "org", "desc": "List store yang bisa diakses user"}
-    ]
-  },
-  {
-    "name": "Products",
-    "endpoints": [
-      {"method": "POST", "path": "/api/v1/org/{slug}/stores/{storeId}/products", "auth": "org", "desc": "Buat product (SKU unik per store)"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{storeId}/products", "auth": "org", "desc": "List product (?search, ?category_id, ?is_active, ?page, ?limit)"},
-      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "auth": "org", "desc": "Detail product"},
-      {"method": "PUT", "path": "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "auth": "org", "desc": "Ubah product penuh"},
-      {"method": "DELETE", "path": "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "auth": "org", "desc": "Hapus product (soft delete)"}
-    ]
-  },
-  {
-    "name": "Docs",
-    "endpoints": [
-      {"method": "GET", "path": "/api/v1/docs", "auth": "publik", "desc": "Halaman dokumentasi ini"},
-      {"method": "GET", "path": "/api/v1/docs.json", "auth": "publik", "desc": "Katalog endpoint format JSON"}
-    ]
-  }
-]
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "slug",
+      "value": "kopi-nusantara",
+      "type": "string"
+    },
+    {
+      "key": "storeId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "description": "Module health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
+            },
+            "description": "Liveness aplikasi\n\nAuth: `publik`.",
+            "auth": {
+              "type": "noauth",
+              "noauth": {}
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Module auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "register"
+              ]
+            },
+            "description": "Registrasi user baru → JWT langsung\n\nAuth: `publik`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"kasir01\",\n  \"name\": \"Kasir Satu\",\n  \"email\": \"kasir01@lattepos.com\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth",
+              "noauth": {}
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "login"
+              ]
+            },
+            "description": "Login username+password → JWT\n\nAuth: `publik`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"kasir01\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth",
+              "noauth": {}
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ]
+            },
+            "description": "Profil user dari token\n\nAuth: `Bearer`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Module users",
+      "item": [
+        {
+          "name": "List users global",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            },
+            "description": "List user global\n\nAuth: `users:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create user global",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            },
+            "description": "Buat user\n\nAuth: `users:create`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"kasir02\",\n  \"name\": \"Kasir Dua\",\n  \"email\": \"kasir02@lattepos.com\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail user\n\nAuth: `users:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "List org users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "users"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "List user satu organisasi\n\nAuth: `org+users:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create org user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "users"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "Buat user dalam organisasi\n\nAuth: `org+users:create`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"kasir03\",\n  \"name\": \"Kasir Tiga\",\n  \"email\": \"kasir03@lattepos.com\",\n  \"password\": \"secret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get org user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "users",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail user dalam organisasi\n\nAuth: `org+users:read`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "RBAC",
+      "description": "Module rbac",
+      "item": [
+        {
+          "name": "List permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "permissions"
+              ]
+            },
+            "description": "List permission\n\nAuth: `permissions:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "permissions"
+              ]
+            },
+            "description": "Buat permission\n\nAuth: `permissions:create`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"products:read\",\n  \"description\": \"Lihat product\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "roles"
+              ]
+            },
+            "description": "List role global\n\nAuth: `roles:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "roles"
+              ]
+            },
+            "description": "Buat role global\n\nAuth: `roles:create`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"cashier\",\n  \"description\": \"Kasir toko\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail role global\n\nAuth: `roles:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/roles/:id/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "roles",
+                ":id",
+                "permissions"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Tambah permission ke role\n\nAuth: `roles:update`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permission_id\": \"<permission-id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign role to user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/:id/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                ":id",
+                "roles"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Tambah role ke user\n\nAuth: `users:update`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_id\": \"<role-id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List org roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "roles"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "List role organisasi\n\nAuth: `org+roles:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create org role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "roles"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "Buat role organisasi\n\nAuth: `org+roles:create`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"cashier\",\n  \"description\": \"Kasir toko\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get org role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/roles/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "roles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail role organisasi\n\nAuth: `org+roles:read`."
+          },
+          "response": []
+        },
+        {
+          "name": "Assign org permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/roles/:id/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "roles",
+                ":id",
+                "permissions"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Tambah permission ke role organisasi\n\nAuth: `roles:update`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permission_id\": \"<permission-id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign org role to user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/users/:id/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "users",
+                ":id",
+                "roles"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Tambah role organisasi ke user\n\nAuth: `org+users:update`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_id\": \"<role-id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "description": "Module organizations",
+      "item": [
+        {
+          "name": "Create organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations"
+              ]
+            },
+            "description": "Buat organisasi (pembuat jadi owner)\n\nAuth: `Bearer`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kopi Nusantara\",\n  \"slug\": \"kopi-nusantara\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations"
+              ]
+            },
+            "description": "List organisasi\n\nAuth: `Bearer`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get organization",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "Detail organisasi\n\nAuth: `Bearer`."
+          },
+          "response": []
+        },
+        {
+          "name": "Select organization",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/auth/select",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "auth",
+                "select"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "Pilih organisasi aktif → token berkonteks org\n\nAuth: `Bearer`."
+          },
+          "response": []
+        },
+        {
+          "name": "List members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "members"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "List member organisasi\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Add member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "members"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "Tambah member\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"<user-id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/members/:uid",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "members",
+                ":uid"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "uid",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Hapus member\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Stores",
+      "description": "Module stores",
+      "item": [
+        {
+          "name": "Create store",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "Buat store\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jakarta Pusat\",\n  \"code\": \"JKT-01\",\n  \"address\": \"Jl. Sudirman No.1\",\n  \"phone\": \"021-123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List stores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                }
+              ]
+            },
+            "description": "List store organisasi\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get store",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail store\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update store",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Ubah store penuh\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jakarta Pusat\",\n  \"code\": \"JKT-01\",\n  \"address\": \"Jl. Sudirman No.1\",\n  \"phone\": \"021-123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set store status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:id/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":id",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Aktif/nonaktif store\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign store user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:id/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":id",
+                "users"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Beri user akses ke store\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"<user-id>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove store user",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:id/users/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":id",
+                "users",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                },
+                {
+                  "key": "userId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Cabut akses user dari store\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "List store users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:id/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":id",
+                "users"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "List user yang punya akses ke store\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "List user stores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/users/:id/stores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "users",
+                ":id",
+                "stores"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "List store yang bisa diakses user\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "description": "Module products",
+      "item": [
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Buat product (SKU unik per store)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kopi Tubruk\",\n  \"sku\": \"KOPI-01\",\n  \"description\": \"Kopi tubruk gula aren\",\n  \"price\": 15000,\n  \"stock\": 100,\n  \"unit\": \"pcs\",\n  \"category_id\": null,\n  \"image_url\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "category_id",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "is_active",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List product (filter via query params)\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail product\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Ubah product penuh\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kopi Tubruk\",\n  \"sku\": \"KOPI-01\",\n  \"description\": \"Kopi tubruk gula aren\",\n  \"price\": 15000,\n  \"stock\": 100,\n  \"unit\": \"pcs\",\n  \"category_id\": null,\n  \"image_url\": \"\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Hapus product (soft delete)\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Docs",
+      "description": "Module docs",
+      "item": [
+        {
+          "name": "API docs page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "docs"
+              ]
+            },
+            "description": "Halaman dokumentasi HTML\n\nAuth: `publik`.",
+            "auth": {
+              "type": "noauth",
+              "noauth": {}
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "API docs JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/docs.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "docs.json"
+              ]
+            },
+            "description": "Katalog collection ini (Postman v2.1)\n\nAuth: `publik`.",
+            "auth": {
+              "type": "noauth",
+              "noauth": {}
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

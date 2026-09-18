@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 9,
+  "revision": 10,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -118,7 +118,7 @@
       "role": "backend",
       "name": "Router Composition",
       "kind": "local",
-      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes, serves the self-contained API docs page plus JSON catalog at /api/v1/docs* (catalog embedded from api-docs.json), and wraps the mux with request logging; the only place that knows all modules.",
+      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes, serves the self-contained API docs page plus Postman Collection v2.1 catalog at /api/v1/docs* (catalog embedded from api-docs.json), and wraps the mux with request logging; the only place that knows all modules.",
       "ownership": [
         {
           "kind": "directory",
@@ -156,24 +156,31 @@
         },
         {
           "path": "internal/router/docs.go",
-          "note": "Docs served at GET /api/v1/docs + /api/v1/docs.json; catalog lists only /api/v1/* paths.",
+          "note": "Docs served at GET /api/v1/docs + /api/v1/docs.json; HTML rows derived from Postman collection.",
           "symbol": "registerDocs",
-          "line": 93,
-          "endLine": 97
+          "line": 86,
+          "endLine": 89
         },
         {
           "path": "internal/router/api-docs.json",
-          "note": "Single source of API catalog: 8 groups, /api/v1/* paths; edit this file for doc maintenance.",
-          "symbol": "apiDocs",
+          "note": "Postman Collection v2.1: 8 folders, 45 requests, importable to Postman; collection vars baseUrl/token/slug/storeId.",
+          "symbol": "LattePOS API",
           "line": 1,
-          "endLine": 10
+          "endLine": 40
         },
         {
           "path": "internal/router/docs.go",
-          "note": "Embeds api-docs.json at build; /api/v1/docs.json serves bytes verbatim, /api/v1/docs renders same data as HTML.",
+          "note": "Embeds api-docs.json at build, validates v2.1 schema, serves bytes verbatim; HTML table parsed from same collection.",
           "symbol": "mustLoadDocs",
-          "line": 10,
-          "endLine": 40
+          "line": 11,
+          "endLine": 84
+        },
+        {
+          "path": "internal/router/docs_test.go",
+          "note": "Guards Postman v2.1 shape incl. valid example bodies, and mux-route coverage of catalog.",
+          "symbol": "TestDocsCatalogCoversMux",
+          "line": 60,
+          "endLine": 85
         }
       ],
       "status": "supported",
