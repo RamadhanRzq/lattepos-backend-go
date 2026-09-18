@@ -25,13 +25,12 @@ type docGroup struct {
 // Path ditulis persis seperti pattern mux ("{slug}" = slug organisasi).
 var apiDocs = []docGroup{
 	{"Health", []docEndpoint{
-		{"GET", "/health", "publik", "Liveness aplikasi"},
+		{"GET", "/api/v1/health", "publik", "Liveness aplikasi"},
 	}},
 	{"Auth", []docEndpoint{
-		{"POST", "/login", "publik", "Login username+password → JWT"},
-		{"POST", "/api/v1/login", "publik", "Alias login versi API"},
-		{"GET", "/me", "Bearer", "Profil user dari token"},
-		{"GET", "/api/v1/me", "Bearer", "Alias profil versi API"},
+		{"POST", "/api/v1/register", "publik", "Registrasi user baru → JWT langsung"},
+		{"POST", "/api/v1/login", "publik", "Login username+password → JWT"},
+		{"GET", "/api/v1/me", "Bearer", "Profil user dari token"},
 	}},
 	{"Users", []docEndpoint{
 		{"GET", "/api/v1/users", "users:read", "List user global"},
@@ -42,13 +41,13 @@ var apiDocs = []docGroup{
 		{"GET", "/api/v1/org/{slug}/users/{id}", "org+users:read", "Detail user dalam organisasi"},
 	}},
 	{"RBAC", []docEndpoint{
-		{"GET", "/permissions", "permissions:read", "List permission"},
-		{"POST", "/permissions", "permissions:create", "Buat permission"},
-		{"GET", "/roles", "roles:read", "List role global"},
-		{"POST", "/roles", "roles:create", "Buat role global"},
-		{"GET", "/roles/{id}", "roles:read", "Detail role global"},
-		{"POST", "/roles/{id}/permissions", "roles:update", "Tambah permission ke role"},
-		{"POST", "/users/{id}/roles", "users:update", "Tambah role ke user"},
+		{"GET", "/api/v1/permissions", "permissions:read", "List permission"},
+		{"POST", "/api/v1/permissions", "permissions:create", "Buat permission"},
+		{"GET", "/api/v1/roles", "roles:read", "List role global"},
+		{"POST", "/api/v1/roles", "roles:create", "Buat role global"},
+		{"GET", "/api/v1/roles/{id}", "roles:read", "Detail role global"},
+		{"POST", "/api/v1/roles/{id}/permissions", "roles:update", "Tambah permission ke role"},
+		{"POST", "/api/v1/users/{id}/roles", "users:update", "Tambah role ke user"},
 		{"GET", "/api/v1/org/{slug}/roles", "org+roles:read", "List role organisasi"},
 		{"POST", "/api/v1/org/{slug}/roles", "org+roles:create", "Buat role organisasi"},
 		{"GET", "/api/v1/org/{slug}/roles/{id}", "org+roles:read", "Detail role organisasi"},
@@ -83,15 +82,15 @@ var apiDocs = []docGroup{
 		{"DELETE", "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "org", "Hapus product (soft delete)"},
 	}},
 	{"Docs", []docEndpoint{
-		{"GET", "/api/docs", "publik", "Halaman dokumentasi ini"},
-		{"GET", "/api/docs.json", "publik", "Katalog endpoint format JSON"},
+		{"GET", "/api/v1/docs", "publik", "Halaman dokumentasi ini"},
+		{"GET", "/api/v1/docs.json", "publik", "Katalog endpoint format JSON"},
 	}},
 }
 
 // registerDocs mendaftarkan rute dokumentasi API: halaman HTML + katalog JSON.
 func registerDocs(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/docs", docsPage)
-	mux.HandleFunc("GET /api/docs.json", docsJSON)
+	mux.HandleFunc("GET /api/v1/docs", docsPage)
+	mux.HandleFunc("GET /api/v1/docs.json", docsJSON)
 }
 
 // docsJSON menulis katalog endpoint sebagai JSON.
@@ -115,7 +114,7 @@ func docsPage(w http.ResponseWriter, r *http.Request) {
 		`.get{background:#2f7d32}.post{background:#1565c0}.put{background:#ef6c00}.patch{background:#6a1b9a}.delete{background:#c62828}` +
 		`</style></head><body><h1>LattePOS API Docs</h1>` +
 		`<p>Header auth: <code>Authorization: Bearer &lt;token&gt;</code>. ` +
-		`<code>{slug}</code> = slug organisasi. Katalog mesin: <a href="/api/docs.json"><code>/api/docs.json</code></a>.</p>`)
+		`<code>{slug}</code> = slug organisasi. Katalog mesin: <a href="/api/v1/docs.json"><code>/api/v1/docs.json</code></a>.</p>`)
 
 	for _, g := range apiDocs {
 		b.WriteString("<h2>" + html.EscapeString(g.Name) + "</h2><table><tr><th>Method</th><th>Path</th><th>Auth</th><th>Deskripsi</th></tr>")

@@ -11,7 +11,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/pkg/response"
 )
 
-// Handler menangani HTTP concern untuk endpoint autentikasi: /login dan /me.
+// Handler menangani HTTP concern untuk endpoint autentikasi: /api/v1/register, /api/v1/login dan /api/v1/me.
 type Handler struct {
 	svc *Service
 }
@@ -46,6 +46,39 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, http.StatusOK, LoginResponse{
+		Token:     token,
+		TokenType: "Bearer",
+		ExpiresAt: time.Now().Add(h.svc.TokenExpiration()),
+		User:      u,
+	})
+}
+
+// Register mendaftarkan user baru dan langsung menerbitkan JWT.
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	var req RegisterRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+
+	u, token, err := h.svc.Register(r.Context(), req.Username, req.Name, req.Email, req.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, users.ErrInvalidInput):
+			response.Error(w, http.StatusBadRequest, "Username, name, email, dan password wajib diisi")
+		case errors.Is(err, users.ErrUsernameTaken):
+			response.Error(w, http.StatusConflict, "Username sudah dipakai")
+		case errors.Is(err, users.ErrEmailTaken):
+			response.Error(w, http.StatusConflict, "Email sudah dipakai")
+		default:
+			response.Error(w, http.StatusInternalServerError, "Gagal registrasi")
+		}
+		return
+	}
+
+	response.JSON(w, http.StatusCreated, LoginResponse{
 		Token:     token,
 		TokenType: "Bearer",
 		ExpiresAt: time.Now().Add(h.svc.TokenExpiration()),

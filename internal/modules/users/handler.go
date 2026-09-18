@@ -18,7 +18,7 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-// List menangani GET /users.
+// List menangani GET /api/v1/users.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	list, err := h.svc.List(r.Context())
 	if err != nil {
@@ -29,7 +29,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, list)
 }
 
-// Create menangani POST /users.
+// Create menangani POST /api/v1/users.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req CreateRequest
 

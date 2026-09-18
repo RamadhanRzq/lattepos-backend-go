@@ -53,7 +53,7 @@ func run() error {
 	}
 
 	userSvc := users.NewService(userRepo)
-	authSvc := auth.NewService(userRepo, jwtManager)
+	authSvc := auth.NewService(userRepo, userSvc, jwtManager)
 	rbacSvc := rbac.NewService(permRepo, roleRepo)
 	orgSvc := organizations.NewService(orgRepo, roleRepo)
 	storeRepo := stores.NewRepository(db)

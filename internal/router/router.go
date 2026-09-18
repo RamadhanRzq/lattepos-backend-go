@@ -31,7 +31,7 @@ type Deps struct {
 // New merangkai route semua module menjadi satu http.Handler.
 func New(deps Deps) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", health)
+	mux.HandleFunc("GET /api/v1/health", health)
 	registerDocs(mux)
 
 	auth.RegisterRoutes(mux, deps.Auth, deps.Verifier)

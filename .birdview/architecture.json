@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 6,
+  "revision": 8,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -118,7 +118,7 @@
       "role": "backend",
       "name": "Router Composition",
       "kind": "local",
-      "responsibility": "Assembles the HTTP surface by delegating to each module RegisterRoutes, serves the self-contained API docs page plus JSON catalog, and wraps the mux with request logging; the only place that knows all modules.",
+      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes, serves the self-contained API docs page plus JSON catalog at /api/v1/docs*, and wraps the mux with request logging; the only place that knows all modules.",
       "ownership": [
         {
           "kind": "directory",
@@ -153,6 +153,27 @@
           "symbol": "New",
           "line": 31,
           "endLine": 44
+        },
+        {
+          "path": "internal/router/docs.go",
+          "note": "Auth group now lists POST /register + /api/v1/register.",
+          "symbol": "apiDocs",
+          "line": 30,
+          "endLine": 37
+        },
+        {
+          "path": "internal/router/router.go",
+          "note": "Liveness at GET /api/v1/health; every module route under /api/v1.",
+          "symbol": "health",
+          "line": 34,
+          "endLine": 49
+        },
+        {
+          "path": "internal/router/docs.go",
+          "note": "Docs served at GET /api/v1/docs + /api/v1/docs.json; catalog lists only /api/v1/* paths.",
+          "symbol": "registerDocs",
+          "line": 93,
+          "endLine": 97
         }
       ],
       "status": "supported",
@@ -216,7 +237,7 @@
       "role": "security",
       "name": "Auth",
       "kind": "local",
-      "responsibility": "Authenticates users: verifies credentials with bcrypt using one uniform error, issues JWT tokens, and serves /login and /me.",
+      "responsibility": "Owns login/registration/me: Login verifies credentials via users repository, Register delegates creation to users service then auto-issues JWT, Me returns token identity; all over the shared users store with bcrypt hashes.",
       "ownership": [
         {
           "kind": "directory",
@@ -251,6 +272,13 @@
           "symbol": "RegisterRoutes",
           "line": 11,
           "endLine": 19
+        },
+        {
+          "path": "internal/modules/auth/service_test.go",
+          "note": "Login uniform-error + Register token/dup/empty tests.",
+          "symbol": "TestService_Register",
+          "line": 80,
+          "endLine": 125
         }
       ],
       "status": "supported",
@@ -363,6 +391,13 @@
           "symbol": "RegisterRoutes",
           "line": 11,
           "endLine": 32
+        },
+        {
+          "path": "internal/modules/rbac/routes.go",
+          "note": "Global RBAC routes moved under /api/v1/*; org-scoped routes already versioned.",
+          "symbol": "RegisterRoutes",
+          "line": 11,
+          "endLine": 36
         }
       ],
       "status": "supported",

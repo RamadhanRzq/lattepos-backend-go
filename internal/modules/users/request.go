@@ -1,6 +1,6 @@
 package users
 
-// CreateRequest adalah payload POST /users.
+// CreateRequest adalah payload POST /api/v1/users.
 type CreateRequest struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
