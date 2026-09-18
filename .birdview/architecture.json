@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 4,
+  "revision": 6,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -30,7 +30,7 @@
         },
         {
           "path": "cmd/server/main.go",
-          "note": "Wiring per module: repositories -> services -> handlers, passed to router.New.",
+          "note": "Wiring per module: repositories -> services -> handlers incl. products, passed to router.New.",
           "symbol": "run",
           "line": 46,
           "endLine": 63
@@ -118,7 +118,7 @@
       "role": "backend",
       "name": "Router Composition",
       "kind": "local",
-      "responsibility": "Assembles the HTTP surface by delegating to each module's RegisterRoutes and wraps the mux with request logging; the only place that knows all modules.",
+      "responsibility": "Assembles the HTTP surface by delegating to each module RegisterRoutes, serves the self-contained API docs page plus JSON catalog, and wraps the mux with request logging; the only place that knows all modules.",
       "ownership": [
         {
           "kind": "directory",
@@ -135,10 +135,24 @@
         },
         {
           "path": "internal/router/router.go",
-          "note": "New registers /health and calls each module's RegisterRoutes, then wraps with middleware.Logger.",
+          "note": "New registers /health and calls each module RegisterRoutes incl. products, then wraps with middleware.Logger.",
           "symbol": "New",
           "line": 28,
           "endLine": 40
+        },
+        {
+          "path": "internal/router/docs.go",
+          "note": "API docs catalog: GET /api/docs page and /api/docs.json, grouped per module.",
+          "symbol": "apiDocs",
+          "line": 31,
+          "endLine": 90
+        },
+        {
+          "path": "internal/router/router.go",
+          "note": "New registers /health, docs routes, then each module RegisterRoutes.",
+          "symbol": "New",
+          "line": 31,
+          "endLine": 44
         }
       ],
       "status": "supported",
@@ -496,7 +510,7 @@
       "role": "database",
       "name": "DB Schema",
       "kind": "local",
-      "responsibility": "SQL migrations and seed data: users, RBAC tables, organization tables with org_id scoping, plus stores and user_stores pivot.",
+      "responsibility": "SQL migrations and seed data: users, RBAC tables, organization tables with org_id scoping, stores/user_stores pivot, plus products table.",
       "ownership": [
         {
           "kind": "directory",
@@ -525,6 +539,12 @@
         {
           "path": "migrations/005_create_stores_up.sql",
           "note": "stores plus user_stores with same-org FKs and indexes.",
+          "line": 1,
+          "endLine": 30
+        },
+        {
+          "path": "migrations/006_create_products_up.sql",
+          "note": "products with store/org FKs, SKU unique per store, price/stock checks, indexes.",
           "line": 1,
           "endLine": 30
         }
@@ -605,6 +625,62 @@
       "openQuestions": [],
       "layout": {
         "row": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "products",
+      "role": "backend",
+      "name": "Products",
+      "kind": "local",
+      "responsibility": "Owns product entity, store-scoped CRUD with SKU-unique-per-store, price/stock validation, soft delete plus paginated search, and store-nested HTTP endpoints behind RequireOrgMember.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/products"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/products/model.go",
+          "note": "Product entity, sentinel errors, Repository contract and StoreChecker port.",
+          "symbol": "Repository",
+          "line": 49,
+          "endLine": 66
+        },
+        {
+          "path": "internal/modules/products/service.go",
+          "note": "Create/Update validate price/stock plus SKU duplicate; List/Get/Delete enforce store boundary via store check.",
+          "symbol": "Service.Create",
+          "line": 15,
+          "endLine": 60
+        },
+        {
+          "path": "internal/modules/products/postgres.go",
+          "note": "SQL against products through *sql.DB with store+org scope, soft delete, SKU exists check.",
+          "symbol": "postgresRepository.Create",
+          "line": 20,
+          "endLine": 50
+        },
+        {
+          "path": "internal/modules/products/handler.go",
+          "note": "Handlers read org from RequireOrgMember context and storeId from path, never trust client scope.",
+          "symbol": "Handler.Create",
+          "line": 25,
+          "endLine": 50
+        },
+        {
+          "path": "internal/modules/products/routes.go",
+          "note": "Registers /api/v1/org/{slug}/stores/{storeId}/products nested routes.",
+          "symbol": "RegisterRoutes",
+          "line": 9,
+          "endLine": 24
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 3,
         "column": 1
       }
     }
@@ -1263,6 +1339,116 @@
           "path": "internal/modules/stores/handler.go",
           "note": "response.JSON / response.Error.",
           "line": 20,
+          "endLine": 180
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "server-wires-products",
+      "from": "api-server",
+      "to": "products",
+      "label": "constructs product repository, service and handler",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "products.NewRepository, NewService, NewHandler.",
+          "line": 58,
+          "endLine": 60
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-products",
+      "from": "http-routes",
+      "to": "products",
+      "label": "products registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "products.RegisterRoutes(mux, ...).",
+          "line": 41,
+          "endLine": 41
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "products-query-postgres",
+      "from": "products",
+      "to": "postgresql",
+      "label": "reads and writes products",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/products/postgres.go",
+          "note": "SQL against products through *sql.DB.",
+          "line": 20,
+          "endLine": 50,
+          "symbol": "postgresRepository.Create"
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "products-checks-store",
+      "from": "products",
+      "to": "stores",
+      "label": "validates store ownership boundary",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/products/service.go",
+          "note": "Create/List enforce same-org store via store check.",
+          "line": 15,
+          "endLine": 60,
+          "symbol": "Service.Create"
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "products-uses-org-context",
+      "from": "products",
+      "to": "auth-middleware",
+      "label": "reads org context from RequireOrgMember",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/products/handler.go",
+          "note": "middleware.OrgIDFromContext supplies tenant boundary.",
+          "line": 25,
+          "endLine": 50
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "products-writes-response",
+      "from": "products",
+      "to": "response-helper",
+      "label": "writes JSON and error bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/products/handler.go",
+          "note": "response.JSON / response.Error.",
+          "line": 25,
           "endLine": 180
         }
       ],
