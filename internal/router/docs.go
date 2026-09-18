@@ -1,11 +1,19 @@
 package router
 
 import (
+	_ "embed"
 	"encoding/json"
 	"html"
 	"net/http"
 	"strings"
 )
+
+//go:embed api-docs.json
+var apiDocsJSON []byte
+
+// apiDocs dimuat sekali dari api-docs.json (sumber tunggal katalog).
+// Maintenance: edit internal/router/api-docs.json saja, tanpa sentuh Go.
+var apiDocs = mustLoadDocs()
 
 // docEndpoint adalah satu baris katalog API.
 type docEndpoint struct {
@@ -21,70 +29,12 @@ type docGroup struct {
 	Endpoints []docEndpoint `json:"endpoints"`
 }
 
-// apiDocs adalah katalog endpoint; tambah grup/baris baru tiap ada RegisterRoutes baru.
-// Path ditulis persis seperti pattern mux ("{slug}" = slug organisasi).
-var apiDocs = []docGroup{
-	{"Health", []docEndpoint{
-		{"GET", "/api/v1/health", "publik", "Liveness aplikasi"},
-	}},
-	{"Auth", []docEndpoint{
-		{"POST", "/api/v1/register", "publik", "Registrasi user baru → JWT langsung"},
-		{"POST", "/api/v1/login", "publik", "Login username+password → JWT"},
-		{"GET", "/api/v1/me", "Bearer", "Profil user dari token"},
-	}},
-	{"Users", []docEndpoint{
-		{"GET", "/api/v1/users", "users:read", "List user global"},
-		{"POST", "/api/v1/users", "users:create", "Buat user"},
-		{"GET", "/api/v1/users/{id}", "users:read", "Detail user"},
-		{"GET", "/api/v1/org/{slug}/users", "org+users:read", "List user satu organisasi"},
-		{"POST", "/api/v1/org/{slug}/users", "org+users:create", "Buat user dalam organisasi"},
-		{"GET", "/api/v1/org/{slug}/users/{id}", "org+users:read", "Detail user dalam organisasi"},
-	}},
-	{"RBAC", []docEndpoint{
-		{"GET", "/api/v1/permissions", "permissions:read", "List permission"},
-		{"POST", "/api/v1/permissions", "permissions:create", "Buat permission"},
-		{"GET", "/api/v1/roles", "roles:read", "List role global"},
-		{"POST", "/api/v1/roles", "roles:create", "Buat role global"},
-		{"GET", "/api/v1/roles/{id}", "roles:read", "Detail role global"},
-		{"POST", "/api/v1/roles/{id}/permissions", "roles:update", "Tambah permission ke role"},
-		{"POST", "/api/v1/users/{id}/roles", "users:update", "Tambah role ke user"},
-		{"GET", "/api/v1/org/{slug}/roles", "org+roles:read", "List role organisasi"},
-		{"POST", "/api/v1/org/{slug}/roles", "org+roles:create", "Buat role organisasi"},
-		{"GET", "/api/v1/org/{slug}/roles/{id}", "org+roles:read", "Detail role organisasi"},
-		{"POST", "/api/v1/org/{slug}/roles/{id}/permissions", "org+roles:update", "Tambah permission ke role organisasi"},
-		{"POST", "/api/v1/org/{slug}/users/{id}/roles", "org+users:update", "Tambah role organisasi ke user"},
-	}},
-	{"Organizations", []docEndpoint{
-		{"POST", "/api/v1/organizations", "Bearer", "Buat organisasi (pembuat jadi owner)"},
-		{"GET", "/api/v1/organizations", "Bearer", "List organisasi"},
-		{"GET", "/api/v1/org/{slug}", "Bearer", "Detail organisasi"},
-		{"POST", "/api/v1/org/{slug}/auth/select", "Bearer", "Pilih organisasi aktif → token berkonteks org"},
-		{"GET", "/api/v1/org/{slug}/members", "org", "List member organisasi"},
-		{"POST", "/api/v1/org/{slug}/members", "org", "Tambah member"},
-		{"DELETE", "/api/v1/org/{slug}/members/{uid}", "org", "Hapus member"},
-	}},
-	{"Stores", []docEndpoint{
-		{"POST", "/api/v1/org/{slug}/stores", "org", "Buat store"},
-		{"GET", "/api/v1/org/{slug}/stores", "org", "List store organisasi"},
-		{"GET", "/api/v1/org/{slug}/stores/{id}", "org", "Detail store"},
-		{"PUT", "/api/v1/org/{slug}/stores/{id}", "org", "Ubah store penuh"},
-		{"PATCH", "/api/v1/org/{slug}/stores/{id}/status", "org", "Aktif/nonaktif store"},
-		{"POST", "/api/v1/org/{slug}/stores/{id}/users", "org", "Beri user akses ke store"},
-		{"DELETE", "/api/v1/org/{slug}/stores/{id}/users/{userId}", "org", "Cabut akses user dari store"},
-		{"GET", "/api/v1/org/{slug}/stores/{id}/users", "org", "List user yang punya akses ke store"},
-		{"GET", "/api/v1/org/{slug}/users/{id}/stores", "org", "List store yang bisa diakses user"},
-	}},
-	{"Products", []docEndpoint{
-		{"POST", "/api/v1/org/{slug}/stores/{storeId}/products", "org", "Buat product (SKU unik per store)"},
-		{"GET", "/api/v1/org/{slug}/stores/{storeId}/products", "org", "List product (?search, ?category_id, ?is_active, ?page, ?limit)"},
-		{"GET", "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "org", "Detail product"},
-		{"PUT", "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "org", "Ubah product penuh"},
-		{"DELETE", "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "org", "Hapus product (soft delete)"},
-	}},
-	{"Docs", []docEndpoint{
-		{"GET", "/api/v1/docs", "publik", "Halaman dokumentasi ini"},
-		{"GET", "/api/v1/docs.json", "publik", "Katalog endpoint format JSON"},
-	}},
+func mustLoadDocs() []docGroup {
+	var groups []docGroup
+	if err := json.Unmarshal(apiDocsJSON, &groups); err != nil {
+		panic("router: api-docs.json tidak valid: " + err.Error())
+	}
+	return groups
 }
 
 // registerDocs mendaftarkan rute dokumentasi API: halaman HTML + katalog JSON.
@@ -93,10 +43,10 @@ func registerDocs(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/docs.json", docsJSON)
 }
 
-// docsJSON menulis katalog endpoint sebagai JSON.
+// docsJSON menyajikan file katalog apa adanya (byte embed dari api-docs.json).
 func docsJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(apiDocs)
+	w.Write(apiDocsJSON)
 }
 
 // docsPage menulis katalog endpoint sebagai halaman HTML mandiri (tanpa dependensi).

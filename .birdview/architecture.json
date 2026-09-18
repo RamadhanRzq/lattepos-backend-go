@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 8,
+  "revision": 9,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -118,7 +118,7 @@
       "role": "backend",
       "name": "Router Composition",
       "kind": "local",
-      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes, serves the self-contained API docs page plus JSON catalog at /api/v1/docs*, and wraps the mux with request logging; the only place that knows all modules.",
+      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes, serves the self-contained API docs page plus JSON catalog at /api/v1/docs* (catalog embedded from api-docs.json), and wraps the mux with request logging; the only place that knows all modules.",
       "ownership": [
         {
           "kind": "directory",
@@ -141,25 +141,11 @@
           "endLine": 40
         },
         {
-          "path": "internal/router/docs.go",
-          "note": "API docs catalog: GET /api/docs page and /api/docs.json, grouped per module.",
-          "symbol": "apiDocs",
-          "line": 31,
-          "endLine": 90
-        },
-        {
           "path": "internal/router/router.go",
           "note": "New registers /health, docs routes, then each module RegisterRoutes.",
           "symbol": "New",
           "line": 31,
           "endLine": 44
-        },
-        {
-          "path": "internal/router/docs.go",
-          "note": "Auth group now lists POST /register + /api/v1/register.",
-          "symbol": "apiDocs",
-          "line": 30,
-          "endLine": 37
         },
         {
           "path": "internal/router/router.go",
@@ -174,6 +160,20 @@
           "symbol": "registerDocs",
           "line": 93,
           "endLine": 97
+        },
+        {
+          "path": "internal/router/api-docs.json",
+          "note": "Single source of API catalog: 8 groups, /api/v1/* paths; edit this file for doc maintenance.",
+          "symbol": "apiDocs",
+          "line": 1,
+          "endLine": 10
+        },
+        {
+          "path": "internal/router/docs.go",
+          "note": "Embeds api-docs.json at build; /api/v1/docs.json serves bytes verbatim, /api/v1/docs renders same data as HTML.",
+          "symbol": "mustLoadDocs",
+          "line": 10,
+          "endLine": 40
         }
       ],
       "status": "supported",

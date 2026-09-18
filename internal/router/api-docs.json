@@ -1,0 +1,87 @@
+[
+  {
+    "name": "Health",
+    "endpoints": [
+      {"method": "GET", "path": "/api/v1/health", "auth": "publik", "desc": "Liveness aplikasi"}
+    ]
+  },
+  {
+    "name": "Auth",
+    "endpoints": [
+      {"method": "POST", "path": "/api/v1/register", "auth": "publik", "desc": "Registrasi user baru → JWT langsung"},
+      {"method": "POST", "path": "/api/v1/login", "auth": "publik", "desc": "Login username+password → JWT"},
+      {"method": "GET", "path": "/api/v1/me", "auth": "Bearer", "desc": "Profil user dari token"}
+    ]
+  },
+  {
+    "name": "Users",
+    "endpoints": [
+      {"method": "GET", "path": "/api/v1/users", "auth": "users:read", "desc": "List user global"},
+      {"method": "POST", "path": "/api/v1/users", "auth": "users:create", "desc": "Buat user"},
+      {"method": "GET", "path": "/api/v1/users/{id}", "auth": "users:read", "desc": "Detail user"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/users", "auth": "org+users:read", "desc": "List user satu organisasi"},
+      {"method": "POST", "path": "/api/v1/org/{slug}/users", "auth": "org+users:create", "desc": "Buat user dalam organisasi"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/users/{id}", "auth": "org+users:read", "desc": "Detail user dalam organisasi"}
+    ]
+  },
+  {
+    "name": "RBAC",
+    "endpoints": [
+      {"method": "GET", "path": "/api/v1/permissions", "auth": "permissions:read", "desc": "List permission"},
+      {"method": "POST", "path": "/api/v1/permissions", "auth": "permissions:create", "desc": "Buat permission"},
+      {"method": "GET", "path": "/api/v1/roles", "auth": "roles:read", "desc": "List role global"},
+      {"method": "POST", "path": "/api/v1/roles", "auth": "roles:create", "desc": "Buat role global"},
+      {"method": "GET", "path": "/api/v1/roles/{id}", "auth": "roles:read", "desc": "Detail role global"},
+      {"method": "POST", "path": "/api/v1/roles/{id}/permissions", "auth": "roles:update", "desc": "Tambah permission ke role"},
+      {"method": "POST", "path": "/api/v1/users/{id}/roles", "auth": "users:update", "desc": "Tambah role ke user"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/roles", "auth": "org+roles:read", "desc": "List role organisasi"},
+      {"method": "POST", "path": "/api/v1/org/{slug}/roles", "auth": "org+roles:create", "desc": "Buat role organisasi"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/roles/{id}", "auth": "org+roles:read", "desc": "Detail role organisasi"},
+      {"method": "POST", "path": "/api/v1/org/{slug}/roles/{id}/permissions", "auth": "roles:update", "desc": "Tambah permission ke role organisasi"},
+      {"method": "POST", "path": "/api/v1/org/{slug}/users/{id}/roles", "auth": "org+users:update", "desc": "Tambah role organisasi ke user"}
+    ]
+  },
+  {
+    "name": "Organizations",
+    "endpoints": [
+      {"method": "POST", "path": "/api/v1/organizations", "auth": "Bearer", "desc": "Buat organisasi (pembuat jadi owner)"},
+      {"method": "GET", "path": "/api/v1/organizations", "auth": "Bearer", "desc": "List organisasi"},
+      {"method": "GET", "path": "/api/v1/org/{slug}", "auth": "Bearer", "desc": "Detail organisasi"},
+      {"method": "POST", "path": "/api/v1/org/{slug}/auth/select", "auth": "Bearer", "desc": "Pilih organisasi aktif → token berkonteks org"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/members", "auth": "org", "desc": "List member organisasi"},
+      {"method": "POST", "path": "/api/v1/org/{slug}/members", "auth": "org", "desc": "Tambah member"},
+      {"method": "DELETE", "path": "/api/v1/org/{slug}/members/{uid}", "auth": "org", "desc": "Hapus member"}
+    ]
+  },
+  {
+    "name": "Stores",
+    "endpoints": [
+      {"method": "POST", "path": "/api/v1/org/{slug}/stores", "auth": "org", "desc": "Buat store"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/stores", "auth": "org", "desc": "List store organisasi"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{id}", "auth": "org", "desc": "Detail store"},
+      {"method": "PUT", "path": "/api/v1/org/{slug}/stores/{id}", "auth": "org", "desc": "Ubah store penuh"},
+      {"method": "PATCH", "path": "/api/v1/org/{slug}/stores/{id}/status", "auth": "org", "desc": "Aktif/nonaktif store"},
+      {"method": "POST", "path": "/api/v1/org/{slug}/stores/{id}/users", "auth": "org", "desc": "Beri user akses ke store"},
+      {"method": "DELETE", "path": "/api/v1/org/{slug}/stores/{id}/users/{userId}", "auth": "org", "desc": "Cabut akses user dari store"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{id}/users", "auth": "org", "desc": "List user yang punya akses ke store"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/users/{id}/stores", "auth": "org", "desc": "List store yang bisa diakses user"}
+    ]
+  },
+  {
+    "name": "Products",
+    "endpoints": [
+      {"method": "POST", "path": "/api/v1/org/{slug}/stores/{storeId}/products", "auth": "org", "desc": "Buat product (SKU unik per store)"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{storeId}/products", "auth": "org", "desc": "List product (?search, ?category_id, ?is_active, ?page, ?limit)"},
+      {"method": "GET", "path": "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "auth": "org", "desc": "Detail product"},
+      {"method": "PUT", "path": "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "auth": "org", "desc": "Ubah product penuh"},
+      {"method": "DELETE", "path": "/api/v1/org/{slug}/stores/{storeId}/products/{id}", "auth": "org", "desc": "Hapus product (soft delete)"}
+    ]
+  },
+  {
+    "name": "Docs",
+    "endpoints": [
+      {"method": "GET", "path": "/api/v1/docs", "auth": "publik", "desc": "Halaman dokumentasi ini"},
+      {"method": "GET", "path": "/api/v1/docs.json", "auth": "publik", "desc": "Katalog endpoint format JSON"}
+    ]
+  }
+]
