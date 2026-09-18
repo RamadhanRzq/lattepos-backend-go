@@ -22,6 +22,7 @@ type postgresRepository struct {
 	stmtRemoveMember *sql.Stmt
 	stmtIsMember     *sql.Stmt
 	stmtListMembers  *sql.Stmt
+	stmtListByUser   *sql.Stmt
 }
 
 var _ Repository = (*postgresRepository)(nil)
@@ -82,7 +83,6 @@ func NewRepository(db *sql.DB) (Repository, error) {
 	if err != nil {
 		return nil, fmt.Errorf("prepare stmtIsMember: %w", err)
 	}
-
 	stmtListMembers, err := db.Prepare(`
 		SELECT u.id, u.username, u.name, u.email, u.role, u.created_at, u.updated_at
 		FROM users u
@@ -91,6 +91,16 @@ func NewRepository(db *sql.DB) (Repository, error) {
 		ORDER BY u.name ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("prepare stmtListMembers: %w", err)
+	}
+
+	stmtListByUser, err := db.Prepare(`
+		SELECT o.id, o.name, o.slug, o.created_at
+		FROM organizations o
+		JOIN organization_members om ON om.org_id = o.id
+		WHERE om.user_id = $1
+		ORDER BY o.created_at ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("prepare stmtListByUser: %w", err)
 	}
 
 	return &postgresRepository{
@@ -103,6 +113,7 @@ func NewRepository(db *sql.DB) (Repository, error) {
 		stmtRemoveMember: stmtRemoveMember,
 		stmtIsMember:     stmtIsMember,
 		stmtListMembers:  stmtListMembers,
+		stmtListByUser:   stmtListByUser,
 	}, nil
 }
 
@@ -206,4 +217,22 @@ func (r *postgresRepository) ListMembers(ctx context.Context, orgID string) ([]u
 		members = append(members, u)
 	}
 	return members, rows.Err()
+}
+
+func (r *postgresRepository) ListByUserID(ctx context.Context, userID string) ([]Organization, error) {
+	rows, err := r.stmtListByUser.QueryContext(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: list user organizations: %w", err)
+	}
+	defer rows.Close()
+
+	var orgs []Organization
+	for rows.Next() {
+		var o Organization
+		if err := rows.Scan(&o.ID, &o.Name, &o.Slug, &o.CreatedAt); err != nil {
+			return nil, fmt.Errorf("postgres: scan user organization: %w", err)
+		}
+		orgs = append(orgs, o)
+	}
+	return orgs, rows.Err()
 }

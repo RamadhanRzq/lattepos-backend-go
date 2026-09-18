@@ -35,7 +35,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, token, err := h.svc.Login(r.Context(), req.Username, req.Password)
+	u, token, orgs, err := h.svc.Login(r.Context(), req.Username, req.Password)
 	if err != nil {
 		if errors.Is(err, users.ErrInvalidCredentials) {
 			response.Error(w, http.StatusUnauthorized, "Username atau password salah")
@@ -46,10 +46,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, http.StatusOK, LoginResponse{
-		Token:     token,
-		TokenType: "Bearer",
-		ExpiresAt: time.Now().Add(h.svc.TokenExpiration()),
-		User:      u,
+		Token:         token,
+		TokenType:     "Bearer",
+		ExpiresAt:     time.Now().Add(h.svc.TokenExpiration()),
+		User:          u,
+		Organizations: orgs,
 	})
 }
 
@@ -63,7 +64,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, token, err := h.svc.Register(r.Context(), req.Username, req.Name, req.Email, req.Password)
+	u, token, orgs, err := h.svc.Register(r.Context(), req.Username, req.Name, req.Email, req.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, users.ErrInvalidInput):
@@ -79,10 +80,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, http.StatusCreated, LoginResponse{
-		Token:     token,
-		TokenType: "Bearer",
-		ExpiresAt: time.Now().Add(h.svc.TokenExpiration()),
-		User:      u,
+		Token:         token,
+		TokenType:     "Bearer",
+		ExpiresAt:     time.Now().Add(h.svc.TokenExpiration()),
+		User:          u,
+		Organizations: orgs,
 	})
 }
 

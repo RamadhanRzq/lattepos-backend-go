@@ -140,3 +140,12 @@ func (s *Service) IsUserMember(ctx context.Context, orgID, userID string) (bool,
 
 	return s.repo.IsMember(ctx, orgID, userID)
 }
+
+func (s *Service) ListUserOrgs(ctx context.Context, userID string) ([]Organization, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, ErrInvalidInput
+	}
+
+	return s.repo.ListByUserID(ctx, userID)
+}

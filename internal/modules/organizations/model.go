@@ -42,4 +42,5 @@ type Repository interface {
 	RemoveMember(ctx context.Context, orgID, userID string) error
 	IsMember(ctx context.Context, orgID, userID string) (bool, error)
 	ListMembers(ctx context.Context, orgID string) ([]users.User, error)
+	ListByUserID(ctx context.Context, userID string) ([]Organization, error)
 }
