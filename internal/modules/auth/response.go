@@ -11,10 +11,10 @@ import (
 // Organizations memuat org user supaya client bisa redirect ke /org/{slug}
 // masing-masing; kosong bila user belum punya organisasi.
 type LoginResponse struct {
-	Token         string                      `json:"token"`
-	TokenType     string                      `json:"token_type"`
-	ExpiresAt     time.Time                   `json:"expires_at"`
-	User          users.User                  `json:"user"` // PasswordHash tersembunyi oleh tag json:"-"
+	Token         string                       `json:"token"`
+	TokenType     string                       `json:"token_type"`
+	ExpiresAt     time.Time                    `json:"expires_at"`
+	User          users.User                   `json:"user"` // PasswordHash tersembunyi oleh tag json:"-"
 	Organizations []organizations.Organization `json:"organizations"`
 }
 
