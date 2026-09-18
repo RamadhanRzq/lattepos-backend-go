@@ -30,8 +30,9 @@ func (s *Service) List(ctx context.Context) ([]User, error) {
 	return out, nil
 }
 
-// ListByOrg mengembalikan user yang menjadi anggota organisasi tersebut.
-func (s *Service) ListByOrg(ctx context.Context, orgID string) ([]User, error) {
+// ListByOrg mengembalikan user yang menjadi anggota organisasi tersebut,
+// beserta role RBAC masing-masing.
+func (s *Service) ListByOrg(ctx context.Context, orgID string) ([]OrgUser, error) {
 	orgID = strings.TrimSpace(orgID)
 	if orgID == "" {
 		return nil, ErrInvalidInput
@@ -42,7 +43,7 @@ func (s *Service) ListByOrg(ctx context.Context, orgID string) ([]User, error) {
 		return nil, err
 	}
 
-	out := make([]User, len(list))
+	out := make([]OrgUser, len(list))
 	for i, u := range list {
 		out[i] = *u
 	}
@@ -50,16 +51,17 @@ func (s *Service) ListByOrg(ctx context.Context, orgID string) ([]User, error) {
 	return out, nil
 }
 
-// GetByIDInOrg hanya mengembalikan user yang merupakan anggota organisasi tersebut.
-func (s *Service) GetByIDInOrg(ctx context.Context, orgID, id string) (User, error) {
+// GetByIDInOrg hanya mengembalikan user yang merupakan anggota organisasi tersebut,
+// beserta role RBAC-nya di organisasi itu.
+func (s *Service) GetByIDInOrg(ctx context.Context, orgID, id string) (OrgUser, error) {
 	orgID = strings.TrimSpace(orgID)
 	if orgID == "" {
-		return User{}, ErrInvalidInput
+		return OrgUser{}, ErrInvalidInput
 	}
 
 	u, err := s.repo.FindByIDInOrg(ctx, orgID, id)
 	if err != nil {
-		return User{}, err
+		return OrgUser{}, err
 	}
 	return *u, nil
 }

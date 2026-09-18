@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -42,21 +43,32 @@ func (r *postgresRepository) FindByID(ctx context.Context, id string) (*User, er
 	return r.queryOne(ctx, query, id)
 }
 
-// FindByIDInOrg mencari user yang merupakan anggota organisasi tersebut.
-func (r *postgresRepository) FindByIDInOrg(ctx context.Context, orgID, id string) (*User, error) {
-	query := `SELECT ` + userColumnsAliased + `
+// FindByIDInOrg mencari user yang merupakan anggota organisasi tersebut,
+// beserta daftar role RBAC-nya di organisasi itu.
+func (r *postgresRepository) FindByIDInOrg(ctx context.Context, orgID, id string) (*OrgUser, error) {
+	query := `SELECT ` + userColumnsAliased + `,
+		` + rolesAgg("1") + `
 		FROM users u
 		JOIN organization_members om ON om.user_id = u.id
 		WHERE om.org_id = $1 AND u.id = $2
 		LIMIT 1`
 
-	return r.queryOne(ctx, query, orgID, id)
+	u, err := scanOrgUser(r.db.QueryRowContext(ctx, query, orgID, id))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("postgres: query org user: %w", err)
+	}
+
+	return u, nil
 }
 
 // ListByOrg mengembalikan anggota organisasi saja, sehingga user dari
 // organisasi lain tidak pernah terlihat.
-func (r *postgresRepository) ListByOrg(ctx context.Context, orgID string) ([]*User, error) {
-	query := `SELECT ` + userColumnsAliased + `
+func (r *postgresRepository) ListByOrg(ctx context.Context, orgID string) ([]*OrgUser, error) {
+	query := `SELECT ` + userColumnsAliased + `,
+		` + rolesAgg("1") + `
 		FROM users u
 		JOIN organization_members om ON om.user_id = u.id
 		WHERE om.org_id = $1
@@ -68,9 +80,9 @@ func (r *postgresRepository) ListByOrg(ctx context.Context, orgID string) ([]*Us
 	}
 	defer rows.Close()
 
-	list := []*User{}
+	list := []*OrgUser{}
 	for rows.Next() {
-		u, err := scanUser(rows)
+		u, err := scanOrgUser(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -145,6 +157,34 @@ func (r *postgresRepository) queryOne(ctx context.Context, query string, args ..
 // rowScanner bekerja untuk *sql.Row maupun *sql.Rows.
 type rowScanner interface {
 	Scan(dest ...any) error
+}
+
+// rolesAgg adalah subselect ke user_roles/roles yang mengembalikan
+// array JSON role user dalam organisasi yang di-query.
+// Dipanggil dengan nomor placeholder orgID pada query luar.
+// COALESCE '[]' menjamin user tanpa role dapat slice kosong, bukan null.
+func rolesAgg(orgPlace string) string {
+	return `COALESCE((
+		SELECT json_agg(json_build_object('id', r.id, 'name', r.name) ORDER BY r.name)
+		FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+		WHERE ur.user_id = u.id AND (ur.org_id IS NULL OR ur.org_id = $` + orgPlace + `::uuid)
+	), '[]'::json) AS roles`
+}
+
+func scanOrgUser(row rowScanner) (*OrgUser, error) {
+	var u OrgUser
+	var raw []byte
+
+	err := row.Scan(&u.ID, &u.Username, &u.Name, &u.Email, &u.Role, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt, &raw)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(raw, &u.Roles); err != nil {
+		return nil, fmt.Errorf("postgres: decode roles: %w", err)
+	}
+
+	return &u, nil
 }
 
 func scanUser(row rowScanner) (*User, error) {

@@ -7,10 +7,10 @@ import "context"
 type Repository interface {
 	FindByUsername(ctx context.Context, username string) (*User, error)
 	FindByID(ctx context.Context, id string) (*User, error)
-	// FindByIDInOrg hanya menemukan user yang benar-benar anggota organisasi tersebut.
-	FindByIDInOrg(ctx context.Context, orgID, id string) (*User, error)
+	// FindByIDInOrg hanya menemukan user yang benar-benar anggota organisasi tersebut, beserta role RBAC-nya.
+	FindByIDInOrg(ctx context.Context, orgID, id string) (*OrgUser, error)
 	List(ctx context.Context) ([]*User, error)
-	// ListByOrg hanya mengembalikan user yang menjadi anggota organisasi tersebut.
-	ListByOrg(ctx context.Context, orgID string) ([]*User, error)
+	// ListByOrg hanya mengembalikan user yang menjadi anggota organisasi tersebut, beserta role RBAC masing-masing.
+	ListByOrg(ctx context.Context, orgID string) ([]*OrgUser, error)
 	Create(ctx context.Context, u *User) error
 }
