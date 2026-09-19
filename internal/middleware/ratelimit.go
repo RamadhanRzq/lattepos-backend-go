@@ -18,8 +18,8 @@ type RateLimiter struct {
 }
 
 type visitor struct {
-	count    int
-	resetAt  time.Time
+	count   int
+	resetAt time.Time
 }
 
 // NewRateLimiter membuat rate limiter baru.

@@ -39,11 +39,11 @@ type TokenPair struct {
 // Service menangani autentikasi: verifikasi kredensial, registrasi,
 // penerbitan token pair, refresh rotation, dan revokasi.
 type Service struct {
-	users    users.Repository
-	userSvc  *users.Service
-	jwt      *appjwt.Manager
-	orgs     OrgLister
-	rtRepo   RefreshTokenRepository
+	users   users.Repository
+	userSvc *users.Service
+	jwt     *appjwt.Manager
+	orgs    OrgLister
+	rtRepo  RefreshTokenRepository
 }
 
 func NewService(
@@ -54,11 +54,11 @@ func NewService(
 	rtRepo RefreshTokenRepository,
 ) *Service {
 	return &Service{
-		users:  userRepo,
+		users:   userRepo,
 		userSvc: userSvc,
-		jwt:    jwtManager,
-		orgs:   orgs,
-		rtRepo: rtRepo,
+		jwt:     jwtManager,
+		orgs:    orgs,
+		rtRepo:  rtRepo,
 	}
 }
 

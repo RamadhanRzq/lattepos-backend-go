@@ -7,11 +7,11 @@ import (
 
 // LoginResponse adalah payload sukses POST /api/v1/login dan POST /api/v1/register.
 type LoginResponse struct {
-	AccessToken  string                       `json:"access_token"`
-	TokenType    string                       `json:"token_type"`
-	ExpiresIn    int                          `json:"expires_in"`
-	RefreshToken string                       `json:"refresh_token"`
-	User         users.User                   `json:"user"`
+	AccessToken   string                       `json:"access_token"`
+	TokenType     string                       `json:"token_type"`
+	ExpiresIn     int                          `json:"expires_in"`
+	RefreshToken  string                       `json:"refresh_token"`
+	User          users.User                   `json:"user"`
 	Organizations []organizations.Organization `json:"organizations"`
 }
 
