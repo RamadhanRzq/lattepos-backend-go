@@ -70,7 +70,7 @@ func (s *stubRepo) ListByUserID(ctx context.Context, userID string) ([]Organizat
 
 type stubRoleRepo struct{}
 
-func (s *stubRoleRepo) Create(ctx context.Context, r *rbac.Role) error            { return nil }
+func (s *stubRoleRepo) Create(ctx context.Context, r *rbac.Role) error { return nil }
 func (s *stubRoleRepo) FindByID(ctx context.Context, id, orgID string) (*rbac.Role, error) {
 	return nil, nil
 }

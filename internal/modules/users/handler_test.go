@@ -19,12 +19,12 @@ func withOrgID(r *http.Request, orgID string) *http.Request {
 // --- stub repository ---
 
 type stubRepo struct {
-	listFn         func(ctx context.Context) ([]*User, error)
-	createFn       func(ctx context.Context, u *User) error
-	findByIDFn     func(ctx context.Context, id string) (*User, error)
-	findByUserFn   func(ctx context.Context, username string) (*User, error)
+	listFn          func(ctx context.Context) ([]*User, error)
+	createFn        func(ctx context.Context, u *User) error
+	findByIDFn      func(ctx context.Context, id string) (*User, error)
+	findByUserFn    func(ctx context.Context, username string) (*User, error)
 	findByIDInOrgFn func(ctx context.Context, orgID, id string) (*OrgUser, error)
-	listByOrgFn    func(ctx context.Context, orgID string) ([]*OrgUser, error)
+	listByOrgFn     func(ctx context.Context, orgID string) ([]*OrgUser, error)
 }
 
 func (s *stubRepo) List(ctx context.Context) ([]*User, error) {

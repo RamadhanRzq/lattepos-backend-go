@@ -19,7 +19,6 @@ import (
 	appjwt "github.com/ramadhanrzq/backend-go/pkg/jwt"
 )
 
-
 // --- stubs ---
 
 type stubUserRepo struct {

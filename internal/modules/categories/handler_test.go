@@ -711,4 +711,3 @@ func TestDelete_InternalError(t *testing.T) {
 		t.Fatalf("want 500, got %d", w.Code)
 	}
 }
-

@@ -49,7 +49,7 @@ func (m *mockRepo) FindByID(_ context.Context, _, _, _ string) (*Product, error)
 func (m *mockRepo) FindByStore(_ context.Context, _, _ string, _ Filter) ([]Product, int, error) {
 	return m.products, m.total, m.err
 }
-func (m *mockRepo) Update(_ context.Context, _ *Product) error        { return m.err }
+func (m *mockRepo) Update(_ context.Context, _ *Product) error         { return m.err }
 func (m *mockRepo) SoftDelete(_ context.Context, _, _, _ string) error { return m.err }
 func (m *mockRepo) ExistsBySKU(_ context.Context, _, _ string, _ *string) (bool, error) {
 	return m.skuDup, m.err

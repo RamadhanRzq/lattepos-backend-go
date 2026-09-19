@@ -33,17 +33,17 @@ func withAuth(r *http.Request) *http.Request {
 // ---- stubs ----
 
 type stubRepo struct {
-	queue      []KitchenSale
-	queueErr   error
-	sale       *KitchenSale
-	findErr    error
-	updated    *KitchenSale
-	updateErr  error
-	updatedItem *KitchenSaleItem
+	queue         []KitchenSale
+	queueErr      error
+	sale          *KitchenSale
+	findErr       error
+	updated       *KitchenSale
+	updateErr     error
+	updatedItem   *KitchenSaleItem
 	updateItemErr error
 }
 
-func (s *stubRepo) Create(context.Context, *KitchenSale) error                         { return nil }
+func (s *stubRepo) Create(context.Context, *KitchenSale) error { return nil }
 func (s *stubRepo) FindByID(context.Context, string, string, string) (*KitchenSale, error) {
 	return s.sale, s.findErr
 }
@@ -51,7 +51,9 @@ func (s *stubRepo) FindQueue(context.Context, string, string) ([]KitchenSale, er
 	return s.queue, s.queueErr
 }
 func (s *stubRepo) FindBySaleID(context.Context, string) (*KitchenSale, error) { return nil, nil }
-func (s *stubRepo) CancelBySale(context.Context, string, string, string) (int64, error) { return 0, nil }
+func (s *stubRepo) CancelBySale(context.Context, string, string, string) (int64, error) {
+	return 0, nil
+}
 func (s *stubRepo) UpdateStatus(context.Context, string, string, string, string, *time.Time, *time.Time) (*KitchenSale, error) {
 	return s.updated, s.updateErr
 }
@@ -61,9 +63,9 @@ func (s *stubRepo) UpdateItemStatus(context.Context, string, string, string, str
 func (s *stubRepo) FindItems(context.Context, string) ([]KitchenSaleItem, error) { return nil, nil }
 
 type stubStoreChecker struct {
-	store    *stores.Store
-	findErr  error
-	assigned bool
+	store     *stores.Store
+	findErr   error
+	assigned  bool
 	assignErr error
 }
 
