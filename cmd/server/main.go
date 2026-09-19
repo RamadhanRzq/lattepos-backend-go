@@ -12,6 +12,7 @@ import (
 
 	"github.com/ramadhanrzq/backend-go/internal/config"
 	"github.com/ramadhanrzq/backend-go/internal/database"
+	"github.com/ramadhanrzq/backend-go/internal/middleware"
 	"github.com/ramadhanrzq/backend-go/internal/modules/auth"
 	"github.com/ramadhanrzq/backend-go/internal/modules/categories"
 	"github.com/ramadhanrzq/backend-go/internal/modules/kitchen"
@@ -41,7 +42,12 @@ func run() error {
 		return err
 	}
 
-	jwtManager := appjwt.NewManager(cfg.App.JWTSecret, time.Duration(cfg.App.JWTExpiration)*time.Minute)
+	jwtManager := appjwt.NewManager(
+		cfg.App.JWTAccessSecret,
+		time.Duration(cfg.App.JWTAccessTTL)*time.Minute,
+		cfg.App.JWTRefreshSecret,
+		time.Duration(cfg.App.JWTRefreshTTL)*time.Hour,
+	)
 
 	db, err := database.Open(cfg)
 	if err != nil {
@@ -61,7 +67,8 @@ func run() error {
 	userSvc := users.NewService(userRepo)
 	rbacSvc := rbac.NewService(permRepo, roleRepo)
 	orgSvc := organizations.NewService(orgRepo, roleRepo)
-	authSvc := auth.NewService(userRepo, userSvc, jwtManager, orgSvc)
+	rtRepo := auth.NewRefreshTokenRepository(db)
+	authSvc := auth.NewService(userRepo, userSvc, jwtManager, orgSvc, rtRepo)
 	storeRepo := stores.NewRepository(db)
 	storeSvc := stores.NewService(storeRepo, orgRepo, userRepo.FindByID)
 	productRepo := products.NewRepository(db)
@@ -83,6 +90,7 @@ func run() error {
 		Verifier:      authSvc,
 		Permissions:   rbacSvc,
 		Orgs:          orgSvc,
+		CORSConfig:    middleware.NewCORSConfig(cfg.App.CORSOrigins),
 		Auth:          auth.NewHandler(authSvc),
 		Users:         users.NewHandler(userSvc),
 		RBAC:          rbac.NewHandler(rbacSvc),

@@ -100,7 +100,7 @@ func (s *stubRoleRepo) GetPermissionsByUserID(ctx context.Context, orgID, userID
 
 func newTestHandler(repo *stubRepo) *Handler {
 	svc := NewService(repo, &stubRoleRepo{})
-	mgr := appjwt.NewManager("test-secret-key-for-testing", time.Hour)
+	mgr := appjwt.NewManager("test-secret-key-for-testing", time.Hour, "test-refresh-secret", 24*time.Hour)
 	return NewHandler(svc, mgr)
 }
 
@@ -121,10 +121,7 @@ func jsonBody(t *testing.T, v any) *bytes.Buffer {
 }
 
 var testClaims = &appjwt.Claims{
-	UserID:   "user-1",
-	Username: "testuser",
-	Email:    "test@example.com",
-	Name:     "Test User",
+	UserID: "user-1",
 }
 
 // --- CreateOrg ---

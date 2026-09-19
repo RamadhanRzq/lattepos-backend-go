@@ -111,7 +111,7 @@ func (h *Handler) SelectOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.jwtManager.GenerateWithOrg(claims.UserID, claims.Username, claims.Email, claims.Name, org.ID, org.Slug)
+	token, err := h.jwtManager.GenerateAccessWithOrg(claims.UserID, org.ID, org.Slug)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Gagal menerbitkan token organisasi")
 		return

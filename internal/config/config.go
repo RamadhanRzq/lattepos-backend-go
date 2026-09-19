@@ -20,9 +20,12 @@ type DBConfig struct {
 
 // AppConfig menyimpan konfigurasi aplikasi.
 type AppConfig struct {
-	Port          string
-	JWTSecret     string
-	JWTExpiration int // dalam menit
+	Port             string
+	JWTAccessSecret  string
+	JWTRefreshSecret string
+	JWTAccessTTL     int // menit
+	JWTRefreshTTL    int // jam
+	CORSOrigins      string
 }
 
 // Config menyimpan seluruh konfigurasi aplikasi.
@@ -48,14 +51,20 @@ func Load() (*Config, error) {
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 		App: AppConfig{
-			Port:          getEnv("PORT", "8000"),
-			JWTSecret:     getEnv("JWT_SECRET", ""),
-			JWTExpiration: getEnvInt("JWT_EXPIRATION_MINUTES", 60),
+			Port:             getEnv("PORT", "8000"),
+			JWTAccessSecret:  getEnv("JWT_ACCESS_SECRET", getEnv("JWT_SECRET", "")),
+			JWTRefreshSecret: getEnv("JWT_REFRESH_SECRET", ""),
+			JWTAccessTTL:     getEnvInt("JWT_ACCESS_TTL_MINUTES", 15),
+			JWTRefreshTTL:    getEnvInt("JWT_REFRESH_TTL_HOURS", 720),
+			CORSOrigins:      getEnv("CORS_ALLOWED_ORIGINS", "*"),
 		},
 	}
 
-	if cfg.App.JWTSecret == "" {
-		return nil, fmt.Errorf("config: JWT_SECRET wajib diisi (cek .env)")
+	if cfg.App.JWTAccessSecret == "" {
+		return nil, fmt.Errorf("config: JWT_ACCESS_SECRET (atau JWT_SECRET) wajib diisi (cek .env)")
+	}
+	if cfg.App.JWTRefreshSecret == "" {
+		cfg.App.JWTRefreshSecret = cfg.App.JWTAccessSecret + "-refresh"
 	}
 
 	return cfg, nil

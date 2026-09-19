@@ -24,7 +24,7 @@ func withClaims(r *http.Request, claims *appjwt.Claims) *http.Request {
 }
 
 func testClaims() *appjwt.Claims {
-	return &appjwt.Claims{UserID: "user-1", Username: "kasir1"}
+	return &appjwt.Claims{UserID: "user-1"}
 }
 
 // --- stubs ---

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -82,12 +83,12 @@ func RequirePermission(auth TokenVerifier, rbacSvc PermissionChecker, permission
 }
 
 func writeUnauthorized(w http.ResponseWriter, err error) {
-	if strings.Contains(err.Error(), "header") {
+	if errors.Is(err, http.ErrNoCookie) {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="lattepos"`)
 	} else {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="lattepos", error="invalid_token"`)
 	}
-	response.Error(w, http.StatusUnauthorized, err.Error())
+	response.Error(w, http.StatusUnauthorized, "Unauthorized")
 }
 
 func authenticate(auth TokenVerifier, r *http.Request) (*appjwt.Claims, error) {

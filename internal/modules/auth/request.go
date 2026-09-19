@@ -13,3 +13,13 @@ type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+// RefreshRequest adalah payload POST /api/v1/auth/refresh.
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+// LogoutRequest adalah payload POST /api/v1/auth/logout.
+type LogoutRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}

@@ -25,6 +25,7 @@ type Deps struct {
 	Verifier    middleware.TokenVerifier
 	Permissions middleware.PermissionChecker
 	Orgs        middleware.OrgMembership
+	CORSConfig  middleware.CORSConfig
 
 	Auth          *auth.Handler
 	Users         *users.Handler
@@ -58,7 +59,7 @@ func New(deps Deps) http.Handler {
 	prices.RegisterRoutes(mux, deps.Prices, deps.Verifier, deps.Orgs)
 	stock.RegisterRoutes(mux, deps.Stock, deps.Verifier, deps.Orgs)
 	kitchen.RegisterRoutes(mux, deps.Kitchen, deps.Verifier, deps.Orgs)
-	return middleware.CORS(middleware.Logger(mux))
+	return middleware.CORS(deps.CORSConfig, middleware.Logger(mux))
 }
 
 // health adalah liveness endpoint level aplikasi.
