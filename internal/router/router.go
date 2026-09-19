@@ -58,7 +58,7 @@ func New(deps Deps) http.Handler {
 	prices.RegisterRoutes(mux, deps.Prices, deps.Verifier, deps.Orgs)
 	stock.RegisterRoutes(mux, deps.Stock, deps.Verifier, deps.Orgs)
 	kitchen.RegisterRoutes(mux, deps.Kitchen, deps.Verifier, deps.Orgs)
-	return middleware.Logger(mux)
+	return middleware.CORS(middleware.Logger(mux))
 }
 
 // health adalah liveness endpoint level aplikasi.
