@@ -16,6 +16,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/organizations"
 	"github.com/ramadhanrzq/backend-go/internal/modules/products"
 	"github.com/ramadhanrzq/backend-go/internal/modules/rbac"
+	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
 	"github.com/ramadhanrzq/backend-go/internal/modules/users"
 	"github.com/ramadhanrzq/backend-go/internal/router"
@@ -58,7 +59,9 @@ func run() error {
 	authSvc := auth.NewService(userRepo, userSvc, jwtManager, orgSvc)
 	storeRepo := stores.NewRepository(db)
 	storeSvc := stores.NewService(storeRepo, orgRepo, userRepo.FindByID)
-	productSvc := products.NewService(products.NewRepository(db), storeRepo)
+	productRepo := products.NewRepository(db)
+	productSvc := products.NewService(productRepo, storeRepo)
+	saleSvc := sales.NewService(sales.NewRepository(db), storeRepo, productRepo)
 
 	handler := router.New(router.Deps{
 		Verifier:      authSvc,
@@ -70,6 +73,7 @@ func run() error {
 		Organizations: organizations.NewHandler(orgSvc, jwtManager),
 		Stores:        stores.NewHandler(storeSvc),
 		Products:      products.NewHandler(productSvc),
+		Sales:         sales.NewHandler(saleSvc),
 	})
 
 	srv := &http.Server{

@@ -150,5 +150,9 @@ func muxPatterns() []string {
 		"GET /api/v1/org/{slug}/stores/{storeId}/products/{id}",
 		"PUT /api/v1/org/{slug}/stores/{storeId}/products/{id}",
 		"DELETE /api/v1/org/{slug}/stores/{storeId}/products/{id}",
+		"POST /api/v1/org/{slug}/stores/{storeId}/sales",
+		"GET /api/v1/org/{slug}/stores/{storeId}/sales",
+		"GET /api/v1/org/{slug}/stores/{storeId}/sales/{id}",
+		"PATCH /api/v1/org/{slug}/stores/{storeId}/sales/{id}/cancel",
 	}
 }

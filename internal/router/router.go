@@ -9,6 +9,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/organizations"
 	"github.com/ramadhanrzq/backend-go/internal/modules/products"
 	"github.com/ramadhanrzq/backend-go/internal/modules/rbac"
+	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
 	"github.com/ramadhanrzq/backend-go/internal/modules/users"
 )
@@ -26,6 +27,7 @@ type Deps struct {
 	Organizations *organizations.Handler
 	Stores        *stores.Handler
 	Products      *products.Handler
+	Sales         *sales.Handler
 }
 
 // New merangkai route semua module menjadi satu http.Handler.
@@ -40,6 +42,7 @@ func New(deps Deps) http.Handler {
 	organizations.RegisterRoutes(mux, deps.Organizations, deps.Verifier, deps.Orgs)
 	stores.RegisterRoutes(mux, deps.Stores, deps.Verifier, deps.Orgs)
 	products.RegisterRoutes(mux, deps.Products, deps.Verifier, deps.Orgs)
+	sales.RegisterRoutes(mux, deps.Sales, deps.Verifier, deps.Orgs)
 	return middleware.Logger(mux)
 }
 

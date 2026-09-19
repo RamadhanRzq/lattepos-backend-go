@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 10,
+  "revision": 11,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -724,6 +724,62 @@
       "layout": {
         "row": 3,
         "column": 1
+      }
+    },
+    {
+      "id": "sales",
+      "role": "backend",
+      "name": "Sales",
+      "kind": "local",
+      "responsibility": "Owns sale entity plus items with price snapshot, store-scoped create/list/get/cancel, server-computed totals, cashier access gate, and store-nested HTTP endpoints behind RequireOrgMember.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/sales"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/sales/model.go",
+          "note": "Sale/SaleItem entities, sentinel errors, Repository contract plus StoreAccessChecker and ProductPriceChecker ports.",
+          "symbol": "Repository",
+          "line": 40,
+          "endLine": 60
+        },
+        {
+          "path": "internal/modules/sales/service.go",
+          "note": "Create validates lines/discount/tax, snapshots product price, computes totals, enforces store access; Cancel pending-only.",
+          "symbol": "Service.Create",
+          "line": 20,
+          "endLine": 80
+        },
+        {
+          "path": "internal/modules/sales/postgres.go",
+          "note": "SQL against sales/sale_items with store+org scope, NUMERIC money scan, atomic create, status/date filters.",
+          "symbol": "postgresRepository.Create",
+          "line": 25,
+          "endLine": 90
+        },
+        {
+          "path": "internal/modules/sales/handler.go",
+          "note": "Handlers read org from RequireOrgMember context, storeId from path, cashier from JWT claims.",
+          "symbol": "Handler.Create",
+          "line": 25,
+          "endLine": 65
+        },
+        {
+          "path": "internal/modules/sales/routes.go",
+          "note": "Registers /api/v1/org/{slug}/stores/{storeId}/sales nested routes.",
+          "symbol": "RegisterRoutes",
+          "line": 9,
+          "endLine": 18
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 3,
+        "column": 2
       }
     }
   ],
@@ -1492,6 +1548,135 @@
           "note": "response.JSON / response.Error.",
           "line": 25,
           "endLine": 180
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "server-wires-sales",
+      "from": "api-server",
+      "to": "sales",
+      "label": "constructs sale repository, service and handler",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "sales.NewRepository, NewService, NewHandler.",
+          "line": 63,
+          "endLine": 64
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-sales",
+      "from": "http-routes",
+      "to": "sales",
+      "label": "sales registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "sales.RegisterRoutes(mux, ...).",
+          "line": 45,
+          "endLine": 45
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "sales-query-postgres",
+      "from": "sales",
+      "to": "postgresql",
+      "label": "reads and writes sales and sale_items",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/sales/postgres.go",
+          "note": "SQL against sales/sale_items through *sql.DB.",
+          "line": 26,
+          "endLine": 62,
+          "symbol": "postgresRepository.Create"
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "sales-checks-store",
+      "from": "sales",
+      "to": "stores",
+      "label": "validates store ownership and cashier access",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/sales/service.go",
+          "note": "authorize via FindByIDInOrg plus IsAssigned.",
+          "line": 120,
+          "endLine": 142,
+          "symbol": "Service.Create"
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "sales-snapshots-product-price",
+      "from": "sales",
+      "to": "products",
+      "label": "snapshots unit price from product",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/sales/service.go",
+          "note": "Create looks up product price per line.",
+          "line": 50,
+          "endLine": 64,
+          "symbol": "Service.Create"
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "sales-uses-org-context",
+      "from": "sales",
+      "to": "auth-middleware",
+      "label": "reads org context from RequireOrgMember",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/sales/handler.go",
+          "note": "middleware.OrgIDFromContext supplies tenant boundary.",
+          "line": 26,
+          "endLine": 47
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "sales-writes-response",
+      "from": "sales",
+      "to": "response-helper",
+      "label": "writes JSON and error bodies",
+      "kind": "dependency",
+      "visibility": "detail",
+      "evidence": [
+        {
+          "path": "internal/modules/sales/handler.go",
+          "note": "response.JSON / response.Error.",
+          "line": 26,
+          "endLine": 191
         }
       ],
       "status": "supported",

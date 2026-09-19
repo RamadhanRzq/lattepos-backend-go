@@ -17,6 +17,7 @@ migrate:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/004_scope_roles_to_org_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/005_create_stores_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/006_create_products_up.sql
+	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/007_create_sales_up.sql
 migrate-fresh:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/001_create_users.sql
@@ -25,6 +26,7 @@ migrate-fresh:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/004_scope_roles_to_org_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/005_create_stores_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/006_create_products_up.sql
+	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/007_create_sales_up.sql
 
 seed:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/seed.sql
