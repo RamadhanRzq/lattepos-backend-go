@@ -1671,7 +1671,7 @@
             "description": "Buat transaksi (harga snapshot dari product, total dihitung server)\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\"product_id\": \"\", \"quantity\": 1}\n  ]\n}",
+              "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"product_id\": \"\",\n      \"variant_id\": null,\n      \"quantity\": 1\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1818,6 +1818,1003 @@
               ]
             },
             "description": "Batalkan transaksi pending\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "description": "Module categories",
+      "item": [
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "categories"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Buat category (slug unik per store)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Minuman\",\n  \"slug\": \"minuman\",\n  \"description\": \"Kategori minuman\",\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "categories"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "List category satu store (flat, terurut name)\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/categories/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "categories",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail category\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/categories/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "categories",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Update category (full replace kecuali org/store)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Minuman Dingin\",\n  \"slug\": \"minuman-dingin\",\n  \"description\": \"Minuman dingin\",\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/categories/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "categories",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Hapus category (ditolak bila masih dipakai product)\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Variants",
+      "description": "Module variants",
+      "item": [
+        {
+          "name": "Create variant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/variants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "variants"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Buat variant (SKU unik per store, boleh kosong)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Es Kopi Susu\",\n  \"sku\": \"KOPI-ES-01\",\n  \"stock\": 50\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List variants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/variants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "variants"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "List variant satu product\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update variant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/variants/:variantId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "variants",
+                ":variantId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "variantId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Update variant (full replace kecuali org/store/product)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Es Kopi Susu Gula Aren\",\n  \"sku\": \"KOPI-ES-01\",\n  \"stock\": 45,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete variant",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/variants/:variantId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "variants",
+                ":variantId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "variantId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Hapus variant\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Prices",
+      "description": "Module prices",
+      "item": [
+        {
+          "name": "Create price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/prices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "prices"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Buat price (price_type default retail; valid_from <= valid_until)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variant_id\": null,\n  \"price_type\": \"retail\",\n  \"price\": 15000,\n  \"min_quantity\": 1,\n  \"valid_from\": null,\n  \"valid_until\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/prices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "prices"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                }
+              ],
+              "query": [
+                {
+                  "key": "only_active",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List price satu product (query only_active=true untuk harga aktif)\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update price",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/prices/:priceId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "prices",
+                ":priceId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "priceId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Update price (full replace kecuali org/store/product)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variant_id\": null,\n  \"price_type\": \"retail\",\n  \"price\": 18000,\n  \"min_quantity\": 1,\n  \"is_active\": true,\n  \"valid_from\": null,\n  \"valid_until\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete price",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/prices/:priceId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "prices",
+                ":priceId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "priceId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Hapus price\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Stock",
+      "description": "Module stock",
+      "item": [
+        {
+          "name": "Record stock movement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/stock-movements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "stock-movements"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Catat mutasi stok (in/out/adjustment/return; update stok live dalam satu tx)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"\",\n  \"variant_id\": null,\n  \"type\": \"in\",\n  \"quantity\": 10,\n  \"reference_type\": \"\",\n  \"reference_id\": \"\",\n  \"notes\": \"restock pagi\",\n  \"allow_negative\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List stock movements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/stock-movements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "stock-movements"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ],
+              "query": [
+                {
+                  "key": "product_id",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Riwayat mutasi stok (filter query product_id/type/from/to/page/limit)\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get product stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "stock"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Ringkasan stok live product + variannya\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Kitchen",
+      "description": "Module kitchen",
+      "item": [
+        {
+          "name": "Kitchen queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/kitchen/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "kitchen",
+                "queue"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Antrian dapur aktif (pending, preparing) terurut prioritas\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get kitchen sale",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/kitchen/:kitchenSaleId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "kitchen",
+                ":kitchenSaleId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "kitchenSaleId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail antrian dapur + items\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update kitchen status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/kitchen/:kitchenSaleId/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "kitchen",
+                ":kitchenSaleId",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "kitchenSaleId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Transisi status antrian: pending→preparing→ready→served (atau cancelled)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"preparing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update kitchen item status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/kitchen/:kitchenSaleId/items/:itemId/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "kitchen",
+                ":kitchenSaleId",
+                "items",
+                ":itemId",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "kitchenSaleId",
+                  "value": ""
+                },
+                {
+                  "key": "itemId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Transisi status satu item; semua item ready → antrian naik otomatis\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ready\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "response": []
         }

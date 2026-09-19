@@ -2,6 +2,7 @@ package sales_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/ramadhanrzq/backend-go/internal/modules/products"
@@ -84,12 +85,12 @@ func (s stubProducts) FindByID(_ context.Context, orgID, storeID, id string) (*p
 	if orgID != "org-a" || storeID != "store-a" || id == "" {
 		return nil, products.ErrNotFound
 	}
-	return &products.Product{ID: id, StoreID: storeID, Price: s.price}, nil
+	return &products.Product{ID: id, StoreID: storeID, Price: s.price, Stock: 100}, nil
 }
 
 func svc(assigned bool) (*sales.Service, *stubRepo) {
 	repo := newStubRepo()
-	return sales.NewService(repo, stubStores{assigned: assigned}, stubProducts{price: 15000}), repo
+	return sales.NewService(repo, stubStores{assigned: assigned}, stubProducts{price: 15000}, nil, nil), repo
 }
 
 func lines() []sales.SaleLine {
@@ -136,5 +137,115 @@ func TestService_CancelPendingOnly(t *testing.T) {
 	repo.items["s-done"] = &sales.Sale{ID: "s-done", Status: sales.StatusCompleted}
 	if _, err := s.Cancel(context.Background(), "org-a", "store-a", "kasir1", "s-done"); err != sales.ErrInvalidStatus {
 		t.Fatalf("cancel completed mau ErrInvalidStatus, dapat %v", err)
+	}
+}
+
+// stubPrices memenuhi sales.PriceResolver.
+type stubPrices struct {
+	price int64
+	found bool
+}
+
+func (s stubPrices) EffectivePrice(context.Context, string, string, string, *string, string, int) (int64, bool, error) {
+	return s.price, s.found, nil
+}
+
+// recEffects merekam pemanggilan hook.
+type recEffects struct {
+	stockOut []string // productID:qty per panggilan
+	kitchen  []*sales.Sale
+	restock  []*sales.Sale
+}
+
+func (r *recEffects) hook() *sales.SideEffects {
+	return &sales.SideEffects{
+		StockOut: func(_ context.Context, _, _, _ string, ln sales.SaleLine, _ string) error {
+			r.stockOut = append(r.stockOut, fmt.Sprintf("%s:%d", ln.ProductID, ln.Quantity))
+			return nil
+		},
+		OpenKitchen: func(_ context.Context, sa *sales.Sale) error {
+			r.kitchen = append(r.kitchen, sa)
+			return nil
+		},
+		Restock: func(_ context.Context, sa *sales.Sale) error {
+			r.restock = append(r.restock, sa)
+			return nil
+		},
+		CancelKitchen: func(_ context.Context, sa *sales.Sale) error {
+			r.kitchen = append(r.kitchen, sa)
+			return nil
+		},
+	}
+}
+
+func TestService_CreateUsesEffectivePrice(t *testing.T) {
+	repo := newStubRepo()
+	// prod-1 pakai harga 12000; prod-2 tidak ketemu → fallback 15000.
+	s := sales.NewService(repo, stubStores{assigned: true},
+		stubProducts{price: 15000},
+		perProductPrices{"prod-1": 12000},
+		nil)
+
+	got, err := s.Create(context.Background(), "org-a", "store-a", "kasir1", "cash", 0, 0, "", lines())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if got.Items[0].UnitPrice != 12000 || got.Items[1].UnitPrice != 15000 {
+		t.Fatalf("unit = %d/%d, mau 12000/15000", got.Items[0].UnitPrice, got.Items[1].UnitPrice)
+	}
+	if got.TotalAmount != 12000*2+15000 {
+		t.Fatalf("total = %d", got.TotalAmount)
+	}
+}
+
+// perProductPrices: resolver harga per product, selalu found.
+type perProductPrices map[string]int64
+
+func (p perProductPrices) EffectivePrice(_ context.Context, _, _, productID string, _ *string, _ string, _ int) (int64, bool, error) {
+	price, ok := p[productID]
+	return price, ok, nil
+}
+
+func TestService_InsufficientStockRejected(t *testing.T) {
+	s := sales.NewService(newStubRepo(), stubStores{assigned: true},
+		stubProducts{price: 15000}, nil, nil)
+	_, err := s.Create(context.Background(), "org-a", "store-a", "kasir1", "cash", 0, 0, "",
+		[]sales.SaleLine{{ProductID: "prod-1", Quantity: 999}})
+	if err != sales.ErrInsufficientStock {
+		t.Fatalf("mau ErrInsufficientStock, dapat %v", err)
+	}
+}
+
+func TestService_CreateFiresSideEffects(t *testing.T) {
+	rec := &recEffects{}
+	s := sales.NewService(newStubRepo(), stubStores{assigned: true}, stubProducts{price: 15000}, nil, rec.hook())
+	got, err := s.Create(context.Background(), "org-a", "store-a", "kasir1", "cash", 0, 0, "", lines())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if len(rec.stockOut) != 2 || rec.stockOut[0] != "prod-1:2" || rec.stockOut[1] != "prod-2:1" {
+		t.Fatalf("stockOut = %v", rec.stockOut)
+	}
+	if len(rec.kitchen) != 1 || rec.kitchen[0].ID != got.ID {
+		t.Fatalf("kitchen = %+v, mau sale %s", rec.kitchen, got.ID)
+	}
+}
+
+func TestService_CancelFiresRestockAndKitchen(t *testing.T) {
+	rec := &recEffects{}
+	s := sales.NewService(newStubRepo(), stubStores{assigned: true}, stubProducts{price: 15000}, nil, rec.hook())
+	got, err := s.Create(context.Background(), "org-a", "store-a", "kasir1", "cash", 0, 0, "", lines())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	after, err := s.Cancel(context.Background(), "org-a", "store-a", "kasir1", got.ID)
+	if err != nil {
+		t.Fatalf("Cancel: %v", err)
+	}
+	if after.Status != sales.StatusCancelled {
+		t.Fatalf("status = %s", after.Status)
+	}
+	if len(rec.kitchen) != 2 {
+		t.Fatalf("OpenKitchen + CancelKitchen mau 2 event, dapat %d", len(rec.kitchen))
 	}
 }

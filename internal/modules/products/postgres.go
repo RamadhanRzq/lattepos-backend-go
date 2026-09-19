@@ -21,13 +21,12 @@ func NewRepository(db *sql.DB) Repository {
 }
 
 // productColumns COALESCE nullable ke zero-value aman untuk Scan.
-const productColumns = "id, store_id, organization_id, name, sku, COALESCE(description, ''), price, stock, COALESCE(unit, 'pcs'), category_id, COALESCE(image_url, ''), is_active, COALESCE(created_by, ''), created_at, updated_at, deleted_at"
+const productColumns = "id, store_id, organization_id, name, sku, COALESCE(description, ''), price, stock, COALESCE(unit, 'pcs'), category_id, COALESCE(image_url, ''), is_active, COALESCE(created_by::text, ''), created_at, updated_at, deleted_at"
 
 func (r *postgresRepository) Create(ctx context.Context, p *Product) error {
 	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO products (store_id, organization_id, name, sku, description, price, stock, unit, category_id, image_url, is_active, created_by)
-		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, NULLIF($8, ''), NULLIF($9, '')::uuid, NULLIF($10, ''),
-			COALESCE($11, TRUE), NULLIF($12, '')::uuid)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::uuid, $10, $11, NULLIF($12, '')::uuid)
 		RETURNING id, COALESCE(unit, 'pcs'), is_active, created_at, updated_at`,
 		p.StoreID, p.OrganizationID, p.Name, p.SKU, p.Description, p.Price, p.Stock, p.Unit,
 		nullableStr(p.CategoryID), p.ImageURL, p.IsActive, p.CreatedBy,
@@ -102,9 +101,9 @@ func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID str
 func (r *postgresRepository) Update(ctx context.Context, p *Product) error {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE products
-		SET name = $4, sku = $5, description = NULLIF($6, ''), price = $7, stock = $8,
-			unit = NULLIF($9, ''), category_id = NULLIF($10, '')::uuid,
-			image_url = NULLIF($11, ''), is_active = $12, updated_at = NOW()
+		SET name = $4, sku = $5, description = $6, price = $7, stock = $8,
+			unit = $9, category_id = NULLIF($10, '')::uuid,
+			image_url = $11, is_active = $12, updated_at = NOW()
 		WHERE organization_id = $1 AND store_id = $2 AND id = $3 AND deleted_at IS NULL`,
 		p.OrganizationID, p.StoreID, p.ID, p.Name, p.SKU, p.Description, p.Price, p.Stock,
 		p.Unit, nullableStr(p.CategoryID), p.ImageURL, p.IsActive)

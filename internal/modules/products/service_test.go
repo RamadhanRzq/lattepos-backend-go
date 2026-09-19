@@ -83,6 +83,17 @@ func (s *stubRepo) ExistsBySKU(_ context.Context, sku, storeID string, excludeID
 // stubStores: hanya store-a milik org-a.
 type stubStores struct{}
 
+// stubDetail: DetailSources kosong; detail product tetap terisi dari entity.
+type stubDetail struct{}
+
+func (stubDetail) ListVariants(context.Context, string, string, string) ([]products.VariantView, error) {
+	return []products.VariantView{}, nil
+}
+
+func (stubDetail) ListPrices(context.Context, string, string, string) ([]products.PriceView, error) {
+	return []products.PriceView{}, nil
+}
+
 func (stubStores) FindByIDInOrg(_ context.Context, orgID, id string) (*stores.Store, error) {
 	if orgID == "org-a" && id == "store-a" {
 		return &stores.Store{ID: id, OrganizationID: orgID}, nil
@@ -92,7 +103,7 @@ func (stubStores) FindByIDInOrg(_ context.Context, orgID, id string) (*stores.St
 
 func svc() (*products.Service, *stubRepo) {
 	repo := newStubRepo()
-	return products.NewService(repo, stubStores{}), repo
+	return products.NewService(repo, stubStores{}, stubDetail{}), repo
 }
 
 func TestService_Create(t *testing.T) {

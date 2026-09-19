@@ -46,10 +46,10 @@ func (r *postgresRepository) Create(ctx context.Context, s *Sale) error {
 		it := &s.Items[i]
 		it.SaleID = s.ID
 		err := tx.QueryRowContext(ctx, `
-			INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, subtotal)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO sale_items (sale_id, product_id, variant_id, quantity, unit_price, subtotal)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING id, created_at`,
-			s.ID, it.ProductID, it.Quantity, it.UnitPrice, it.Subtotal,
+			s.ID, it.ProductID, it.VariantID, it.Quantity, it.UnitPrice, it.Subtotal,
 		).Scan(&it.ID, &it.CreatedAt)
 		if err != nil {
 			return mapCreateError(err)
@@ -192,7 +192,7 @@ type querier interface {
 
 func scanTxItems(ctx context.Context, q querier, saleID string) ([]SaleItem, error) {
 	rows, err := q.QueryContext(ctx, `
-		SELECT id, sale_id, product_id, quantity, unit_price, subtotal, created_at
+		SELECT id, sale_id, product_id, variant_id, quantity, unit_price, subtotal, created_at
 		FROM sale_items
 		WHERE sale_id = $1
 		ORDER BY created_at ASC`, saleID)
@@ -205,7 +205,7 @@ func scanTxItems(ctx context.Context, q querier, saleID string) ([]SaleItem, err
 	for rows.Next() {
 		var it SaleItem
 		var unit, sub numericValue
-		if err := rows.Scan(&it.ID, &it.SaleID, &it.ProductID, &it.Quantity, &unit, &sub, &it.CreatedAt); err != nil {
+		if err := rows.Scan(&it.ID, &it.SaleID, &it.ProductID, &it.VariantID, &it.Quantity, &unit, &sub, &it.CreatedAt); err != nil {
 			return nil, fmt.Errorf("postgres: scan sale item: %w", err)
 		}
 		it.UnitPrice, it.Subtotal = int64(unit), int64(sub)

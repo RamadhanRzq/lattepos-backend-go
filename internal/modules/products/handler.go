@@ -117,7 +117,7 @@ func (h *Handler) ByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := h.svc.Get(r.Context(), orgID, storeID, id)
+	p, err := h.svc.GetDetail(r.Context(), orgID, storeID, id)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			response.Error(w, http.StatusNotFound, "Product not found")

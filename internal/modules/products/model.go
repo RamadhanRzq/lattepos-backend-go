@@ -64,3 +64,55 @@ type Repository interface {
 type StoreChecker interface {
 	FindByIDInOrg(ctx context.Context, orgID, id string) (*stores.Store, error)
 }
+
+// VariantView adalah varian ringkas untuk detail product. DTO lokal supaya
+// products tidak mengimpor module variants (variants mengimpor products).
+type VariantView struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	SKU      string `json:"sku"`
+	Stock    int    `json:"stock"`
+	IsActive bool   `json:"is_active"`
+}
+
+// PriceView adalah satu baris harga untuk detail product.
+type PriceView struct {
+	ID          string     `json:"id"`
+	VariantID   *string    `json:"variant_id,omitempty"`
+	PriceType   string     `json:"price_type"`
+	Price       int64      `json:"price"`
+	MinQuantity int        `json:"min_quantity"`
+	IsActive    bool       `json:"is_active"`
+	ValidFrom   *time.Time `json:"valid_from,omitempty"`
+	ValidUntil  *time.Time `json:"valid_until,omitempty"`
+}
+
+// VariantStockView adalah stok live satu varian.
+type VariantStockView struct {
+	VariantID string `json:"variant_id"`
+	Stock     int    `json:"stock"`
+}
+
+// StockView adalah ringkasan stok live product (kolom stock entity; riwayat
+// movement tetap milik module stock).
+type StockView struct {
+	ProductStock int                `json:"product_stock"`
+	Variants     []VariantStockView `json:"variants"`
+}
+
+// ProductDetail adalah response GET products/{id}: product + varian + harga +
+// ringkasan stok live.
+type ProductDetail struct {
+	Product
+	Variants []VariantView `json:"variants"`
+	Prices   []PriceView   `json:"prices"`
+	Stock    StockView     `json:"stock"`
+}
+
+// DetailSources adalah port pengaya detail product (varian + harga).
+// Dipenuhi adapter composition root di atas variants/prices service;
+// products tidak mengimpor module itu karena keduanya mengimpor products.
+type DetailSources interface {
+	ListVariants(ctx context.Context, orgID, storeID, productID string) ([]VariantView, error)
+	ListPrices(ctx context.Context, orgID, storeID, productID string) ([]PriceView, error)
+}

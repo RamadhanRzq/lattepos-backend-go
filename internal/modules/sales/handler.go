@@ -48,7 +48,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	lines := make([]SaleLine, len(req.Items))
 	for i, it := range req.Items {
-		lines[i] = SaleLine{ProductID: it.ProductID, Quantity: it.Quantity}
+		lines[i] = SaleLine{ProductID: it.ProductID, VariantID: it.VariantID, Quantity: it.Quantity}
 	}
 	s, err := h.svc.Create(r.Context(), orgID, storeID, userID,
 		req.PaymentMethod, req.DiscountAmount, req.TaxAmount, req.Notes, lines)
@@ -64,6 +64,8 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			response.Error(w, http.StatusForbidden, "Anda tidak punya akses ke store ini")
 		case errors.Is(err, ErrProductNotFound):
 			response.Error(w, http.StatusBadRequest, "Product tidak ditemukan di store ini")
+		case errors.Is(err, ErrInsufficientStock):
+			response.Error(w, http.StatusConflict, "Stok tidak cukup untuk transaksi ini")
 		default:
 			response.Error(w, http.StatusInternalServerError, "Gagal membuat sale")
 		}

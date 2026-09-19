@@ -2,8 +2,9 @@ package sales
 
 // CreateItem adalah satu baris payload POST .../sales.
 type CreateItem struct {
-	ProductID string `json:"product_id"`
-	Quantity  int    `json:"quantity"`
+	ProductID string  `json:"product_id"`
+	VariantID *string `json:"variant_id"`
+	Quantity  int     `json:"quantity"`
 }
 
 // CreateRequest adalah payload POST /api/v1/org/{slug}/stores/{storeId}/sales.

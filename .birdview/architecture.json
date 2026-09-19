@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 11,
+  "revision": 12,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -13,7 +13,7 @@
       "role": "backend",
       "name": "API Server",
       "kind": "local",
-      "responsibility": "Composition root: loads config, opens the PostgreSQL connection, wires each module's repository/service/handler and serves the assembled router with graceful shutdown.",
+      "responsibility": "Composition root: loads config, opens the PostgreSQL connection, wires each module's repository/service/handler with domain side-effects/detail adapters and serves the assembled router with graceful shutdown.",
       "ownership": [
         {
           "kind": "file",
@@ -81,8 +81,8 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 0,
-        "column": 0
+        "row": 1,
+        "column": 1
       }
     },
     {
@@ -110,7 +110,7 @@
       "openQuestions": [],
       "layout": {
         "row": 1,
-        "column": 1
+        "column": 2
       }
     },
     {
@@ -118,7 +118,7 @@
       "role": "backend",
       "name": "Router Composition",
       "kind": "local",
-      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes, serves the self-contained API docs page plus Postman Collection v2.1 catalog at /api/v1/docs* (catalog embedded from api-docs.json), and wraps the mux with request logging; the only place that knows all modules.",
+      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes (auth, users, rbac, organizations, stores, products, sales, categories, variants, prices, stock, kitchen) and mounting health/docs.",
       "ownership": [
         {
           "kind": "directory",
@@ -235,8 +235,8 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 3,
-        "column": 0
+        "row": 2,
+        "column": 1
       }
     },
     {
@@ -291,8 +291,8 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 0,
-        "column": 1
+        "row": 2,
+        "column": 2
       }
     },
     {
@@ -347,8 +347,8 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 1,
-        "column": 2
+        "row": 3,
+        "column": 0
       }
     },
     {
@@ -410,8 +410,8 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 2,
-        "column": 2
+        "row": 3,
+        "column": 1
       }
     },
     {
@@ -508,7 +508,7 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 0,
+        "row": 2,
         "column": 3
       }
     },
@@ -543,7 +543,7 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 1,
+        "row": 3,
         "column": 3
       }
     },
@@ -552,7 +552,7 @@
       "role": "database",
       "name": "DB Schema",
       "kind": "local",
-      "responsibility": "SQL migrations and seed data: users, RBAC tables, organization tables with org_id scoping, stores/user_stores pivot, plus products table.",
+      "responsibility": "SQL migrations and seed data: users, RBAC tables, organization tables with org_id scoping, stores, products, sales, categories, variants, prices, stock movements, and kitchen sales.",
       "ownership": [
         {
           "kind": "directory",
@@ -595,7 +595,7 @@
       "openQuestions": [],
       "layout": {
         "row": 4,
-        "column": 2
+        "column": 3
       }
     },
     {
@@ -617,8 +617,8 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 0,
-        "column": 4
+        "row": 1,
+        "column": 3
       }
     },
     {
@@ -666,8 +666,8 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 2,
-        "column": 1
+        "row": 4,
+        "column": 0
       }
     },
     {
@@ -675,7 +675,7 @@
       "role": "backend",
       "name": "Products",
       "kind": "local",
-      "responsibility": "Owns product entity, store-scoped CRUD with SKU-unique-per-store, price/stock validation, soft delete plus paginated search, and store-nested HTTP endpoints behind RequireOrgMember.",
+      "responsibility": "Owns product entity, store-scoped CRUD with SKU-unique-per-store, price/stock validation, soft delete plus paginated search, enriched detail view (variants+prices+live stock), and store-nested HTTP endpoints behind RequireOrgMember.",
       "ownership": [
         {
           "kind": "directory",
@@ -722,7 +722,7 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 3,
+        "row": 4,
         "column": 1
       }
     },
@@ -731,7 +731,7 @@
       "role": "backend",
       "name": "Sales",
       "kind": "local",
-      "responsibility": "Owns sale entity plus items with price snapshot, store-scoped create/list/get/cancel, server-computed totals, cashier access gate, and store-nested HTTP endpoints behind RequireOrgMember.",
+      "responsibility": "Owns sale entity plus items with price snapshot, store-scoped create/list/get/cancel, server-computed totals, cashier access gate, automatic stock deduction + kitchen queue integration, and store-nested HTTP endpoints behind RequireOrgMember.",
       "ownership": [
         {
           "kind": "directory",
@@ -778,8 +778,253 @@
       "status": "supported",
       "openQuestions": [],
       "layout": {
-        "row": 3,
+        "row": 5,
+        "column": 3
+      }
+    },
+    {
+      "id": "categories",
+      "role": "backend",
+      "name": "Categories",
+      "kind": "local",
+      "responsibility": "Owns category entity, hierarchical classification (parent_id) within a store, slug uniqueness per store, and store-scoped HTTP endpoints behind RequireOrgMember.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/categories"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/categories/model.go",
+          "note": "Category entity, repository and StoreChecker contracts.",
+          "symbol": "Category",
+          "line": 21,
+          "endLine": 31
+        },
+        {
+          "path": "internal/modules/categories/service.go",
+          "note": "Business rules: store boundary, parent validation, slug uniqueness.",
+          "symbol": "Service.Create",
+          "line": 23,
+          "endLine": 52
+        },
+        {
+          "path": "internal/modules/categories/postgres.go",
+          "note": "PostgreSQL repository implementation for categories.",
+          "symbol": "postgresRepository.Create",
+          "line": 25,
+          "endLine": 45
+        },
+        {
+          "path": "internal/modules/categories/routes.go",
+          "note": "Registers /api/v1/org/{slug}/stores/{storeId}/categories routes.",
+          "symbol": "RegisterRoutes",
+          "line": 12,
+          "endLine": 28
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 4,
         "column": 2
+      }
+    },
+    {
+      "id": "variants",
+      "role": "backend",
+      "name": "Product Variants",
+      "kind": "local",
+      "responsibility": "Owns product variant entity within a product+store, optional per-store unique SKU, stock tracking, and nested HTTP endpoints behind RequireOrgMember.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/variants"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/variants/model.go",
+          "note": "ProductVariant entity, repository and StoreChecker/ProductChecker contracts.",
+          "symbol": "ProductVariant",
+          "line": 22,
+          "endLine": 33
+        },
+        {
+          "path": "internal/modules/variants/service.go",
+          "note": "Enforces product and store ownership, unique SKU check.",
+          "symbol": "Service.Create",
+          "line": 23,
+          "endLine": 66
+        },
+        {
+          "path": "internal/modules/variants/postgres.go",
+          "note": "PostgreSQL repository implementation for product variants.",
+          "symbol": "postgresRepository.Create",
+          "line": 25,
+          "endLine": 45
+        },
+        {
+          "path": "internal/modules/variants/routes.go",
+          "note": "Registers /api/v1/org/{slug}/stores/{storeId}/products/{productId}/variants routes.",
+          "symbol": "RegisterRoutes",
+          "line": 12,
+          "endLine": 27
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 5,
+        "column": 0
+      }
+    },
+    {
+      "id": "prices",
+      "role": "backend",
+      "name": "Pricing",
+      "kind": "local",
+      "responsibility": "Owns product and variant pricing tiers, price types (retail/wholesale), quantity brackets, time validity windows, and effective price resolution.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/prices"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/prices/model.go",
+          "note": "ProductPrice entity, repository contract and FindEffective query.",
+          "symbol": "ProductPrice",
+          "line": 21,
+          "endLine": 36
+        },
+        {
+          "path": "internal/modules/prices/service.go",
+          "note": "Effective price resolution by product, variant, type, qty, and time.",
+          "symbol": "Service.EffectivePrice",
+          "line": 150,
+          "endLine": 167
+        },
+        {
+          "path": "internal/modules/prices/postgres.go",
+          "note": "PostgreSQL repository implementation with FindEffective query.",
+          "symbol": "postgresRepository.FindEffective",
+          "line": 140,
+          "endLine": 165
+        },
+        {
+          "path": "internal/modules/prices/routes.go",
+          "note": "Registers /api/v1/org/{slug}/stores/{storeId}/products/{productId}/prices routes.",
+          "symbol": "RegisterRoutes",
+          "line": 12,
+          "endLine": 27
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "stock",
+      "role": "backend",
+      "name": "Stock Movements",
+      "kind": "local",
+      "responsibility": "Records immutable audit history of stock adjustments (in/out/adjustment/return) with atomic live stock updates, stock summary aggregation, and store-scoped endpoints.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/stock"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/stock/model.go",
+          "note": "StockMovement, StockSummary entities and movement types.",
+          "symbol": "StockMovement",
+          "line": 26,
+          "endLine": 41
+        },
+        {
+          "path": "internal/modules/stock/service.go",
+          "note": "Records movements with store authorization and live stock synchronization.",
+          "symbol": "Service.Record",
+          "line": 22,
+          "endLine": 65
+        },
+        {
+          "path": "internal/modules/stock/postgres.go",
+          "note": "PostgreSQL atomic record transaction updating product/variant stock.",
+          "symbol": "postgresRepository.Record",
+          "line": 34,
+          "endLine": 85
+        },
+        {
+          "path": "internal/modules/stock/routes.go",
+          "note": "Registers stock-movements and product stock summary routes.",
+          "symbol": "RegisterRoutes",
+          "line": 12,
+          "endLine": 25
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 5,
+        "column": 2
+      }
+    },
+    {
+      "id": "kitchen",
+      "role": "backend",
+      "name": "Kitchen Display",
+      "kind": "local",
+      "responsibility": "Owns kitchen order queue and preparation lifecycle (pending -> preparing -> ready -> served / cancelled), per-item status tracking with auto-ready transition, and sale cancellation sync.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/kitchen"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/kitchen/model.go",
+          "note": "KitchenSale, KitchenSaleItem entities and state machine statuses.",
+          "symbol": "KitchenSale",
+          "line": 29,
+          "endLine": 42
+        },
+        {
+          "path": "internal/modules/kitchen/service.go",
+          "note": "Queue lifecycle, status transition validation, sale creation/cancellation integration.",
+          "symbol": "Service.CreateForSale",
+          "line": 56,
+          "endLine": 110
+        },
+        {
+          "path": "internal/modules/kitchen/postgres.go",
+          "note": "PostgreSQL repository implementation for kitchen sales and items.",
+          "symbol": "postgresRepository.Create",
+          "line": 30,
+          "endLine": 70
+        },
+        {
+          "path": "internal/modules/kitchen/routes.go",
+          "note": "Registers kitchen queue, detail, and status PATCH endpoints.",
+          "symbol": "RegisterRoutes",
+          "line": 12,
+          "endLine": 25
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 6,
+        "column": 0
       }
     }
   ],
@@ -1677,6 +1922,330 @@
           "note": "response.JSON / response.Error.",
           "line": 26,
           "endLine": 191
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-categories",
+      "from": "http-routes",
+      "to": "categories",
+      "label": "categories registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "categories.RegisterRoutes(mux, ...)",
+          "line": 56,
+          "endLine": 56
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-variants",
+      "from": "http-routes",
+      "to": "variants",
+      "label": "variants registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "variants.RegisterRoutes(mux, ...)",
+          "line": 57,
+          "endLine": 57
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-prices",
+      "from": "http-routes",
+      "to": "prices",
+      "label": "prices registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "prices.RegisterRoutes(mux, ...)",
+          "line": 58,
+          "endLine": 58
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-stock",
+      "from": "http-routes",
+      "to": "stock",
+      "label": "stock registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "stock.RegisterRoutes(mux, ...)",
+          "line": 59,
+          "endLine": 59
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-kitchen",
+      "from": "http-routes",
+      "to": "kitchen",
+      "label": "kitchen registers its own routes",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "kitchen.RegisterRoutes(mux, ...)",
+          "line": 60,
+          "endLine": 60
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "categories-query-postgres",
+      "from": "categories",
+      "to": "postgresql",
+      "label": "reads and writes categories table",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/categories/postgres.go",
+          "note": "SQL queries against categories table.",
+          "line": 25,
+          "endLine": 45
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "variants-query-postgres",
+      "from": "variants",
+      "to": "postgresql",
+      "label": "reads and writes product_variants table",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/variants/postgres.go",
+          "note": "SQL queries against product_variants table.",
+          "line": 25,
+          "endLine": 45
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "prices-query-postgres",
+      "from": "prices",
+      "to": "postgresql",
+      "label": "reads and writes product_prices table",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/prices/postgres.go",
+          "note": "SQL queries against product_prices table.",
+          "line": 25,
+          "endLine": 45
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "stock-query-postgres",
+      "from": "stock",
+      "to": "postgresql",
+      "label": "reads and writes stock_movements table",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/stock/postgres.go",
+          "note": "SQL queries against stock_movements table.",
+          "line": 34,
+          "endLine": 85
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "kitchen-query-postgres",
+      "from": "kitchen",
+      "to": "postgresql",
+      "label": "reads and writes kitchen_sales and kitchen_sale_items tables",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/kitchen/postgres.go",
+          "note": "SQL queries against kitchen tables.",
+          "line": 30,
+          "endLine": 70
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "categories-checks-store",
+      "from": "categories",
+      "to": "stores",
+      "label": "validates store ownership via StoreChecker",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/categories/service.go",
+          "note": "stores.FindByIDInOrg port check.",
+          "line": 39,
+          "endLine": 42
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "variants-checks-store-product",
+      "from": "variants",
+      "to": "products",
+      "label": "validates product and store boundary",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/variants/service.go",
+          "note": "checks product belongs to store and org.",
+          "line": 39,
+          "endLine": 42
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "prices-checks-product-variant",
+      "from": "prices",
+      "to": "products",
+      "label": "validates product and variant existence",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/prices/service.go",
+          "note": "checks product and variant boundaries.",
+          "line": 48,
+          "endLine": 54
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "stock-checks-store",
+      "from": "stock",
+      "to": "stores",
+      "label": "validates store access via StoreChecker",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/stock/service.go",
+          "note": "authorizes user store assignment.",
+          "line": 45,
+          "endLine": 48
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "kitchen-checks-sale",
+      "from": "kitchen",
+      "to": "sales",
+      "label": "checks parent sale status and existence",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/kitchen/service.go",
+          "note": "guards mutation against cancelled parent sale.",
+          "line": 72,
+          "endLine": 82
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "sales-resolves-effective-price",
+      "from": "sales",
+      "to": "prices",
+      "label": "resolves tiered/promotional price via PriceResolver port",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/sales/service.go",
+          "note": "unitPrice resolves via prices.EffectivePrice.",
+          "line": 103,
+          "endLine": 118
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "sales-triggers-stock-and-kitchen",
+      "from": "sales",
+      "to": "api-server",
+      "label": "fires side-effects for stock deduction and kitchen queue via composition root",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "saleSideEffects wires stockSvc.Record and kitchenSvc.CreateForSale.",
+          "line": 140,
+          "endLine": 175
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "products-enriches-detail",
+      "from": "products",
+      "to": "api-server",
+      "label": "enriches product detail with variants, prices, and live stock via DetailSources adapter",
+      "kind": "request",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "cmd/server/main.go",
+          "note": "productDetailSources wires variantSvc and priceSvc into products.GetDetail.",
+          "line": 180,
+          "endLine": 215
         }
       ],
       "status": "supported",
