@@ -71,7 +71,7 @@
     },
     {
       "name": "Auth",
-      "description": "Module auth",
+      "description": "Module auth: login, register, refresh token rotation, logout.",
       "item": [
         {
           "name": "Register",
@@ -95,7 +95,7 @@
                 "register"
               ]
             },
-            "description": "Registrasi user baru → JWT langsung\n\nAuth: `publik`.",
+            "description": "Registrasi user baru → access token (15m) + refresh token (30d).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"kasir01\",\n  \"name\": \"Kasir Satu\",\n  \"email\": \"kasir01@lattepos.com\",\n  \"password\": \"secret123\"\n}",
@@ -134,7 +134,7 @@
                 "login"
               ]
             },
-            "description": "Login username+password → JWT\n\nAuth: `publik`.",
+            "description": "Login username+password → access token (15m) + refresh token (30d).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"kasir01\",\n  \"password\": \"secret123\"\n}",
@@ -148,6 +148,107 @@
               "type": "noauth",
               "noauth": {}
             }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Token rotation: kirim refresh token lama, terima access token + refresh token baru. Token lama otomatis direvoke.\n\nReuse token yang sudah direvoke → seluruh token family direvoke (reuse detection).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"<refresh_token dari login/register>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth",
+              "noauth": {}
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Revoke satu refresh token (perangkat ini). Access token tetap valid sampai expired (15m).\n\nAuth: `publik` (kirim refresh token di body).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"<refresh_token yang ingin direvoke>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth",
+              "noauth": {}
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout all devices",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout-all"
+              ]
+            },
+            "description": "Revoke semua refresh token milik user (semua perangkat). Access token tetap valid sampai expired (15m).\n\nAuth: `Bearer`."
           },
           "response": []
         },
@@ -167,7 +268,7 @@
                 "me"
               ]
             },
-            "description": "Profil user dari token\n\nAuth: `Bearer`."
+            "description": "Profil user dari access token.\n\nAuth: `Bearer`."
           },
           "response": []
         }
