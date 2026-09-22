@@ -15,6 +15,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
+	"github.com/ramadhanrzq/backend-go/internal/modules/transactions"
 	"github.com/ramadhanrzq/backend-go/internal/modules/users"
 	"github.com/ramadhanrzq/backend-go/internal/modules/variants"
 )
@@ -34,6 +35,7 @@ type Deps struct {
 	Stores        *stores.Handler
 	Products      *products.Handler
 	Sales         *sales.Handler
+	Transactions  *transactions.Handler
 	Categories    *categories.Handler
 	Variants      *variants.Handler
 	Prices        *prices.Handler
@@ -54,6 +56,7 @@ func New(deps Deps) http.Handler {
 	stores.RegisterRoutes(mux, deps.Stores, deps.Verifier, deps.Orgs)
 	products.RegisterRoutes(mux, deps.Products, deps.Verifier, deps.Orgs)
 	sales.RegisterRoutes(mux, deps.Sales, deps.Verifier, deps.Orgs)
+	transactions.RegisterRoutes(mux, deps.Sales, deps.Transactions, deps.Verifier, deps.Orgs)
 	categories.RegisterRoutes(mux, deps.Categories, deps.Verifier, deps.Orgs)
 	variants.RegisterRoutes(mux, deps.Variants, deps.Verifier, deps.Orgs)
 	prices.RegisterRoutes(mux, deps.Prices, deps.Verifier, deps.Orgs)

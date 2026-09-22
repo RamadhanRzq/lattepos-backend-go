@@ -1925,6 +1925,243 @@
       ]
     },
     {
+      "name": "Transactions",
+      "description": "Module transactions (alias sales + laporan harian)",
+      "item": [
+        {
+          "name": "Daily report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/transactions/daily",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "transactions",
+                "daily"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-09-22",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Laporan transaksi harian dari sales (agregat count, omzet, per status/payment/jam/produk; date=YYYY-MM-DD, default hari ini)\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "transactions"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Buat transaksi (alias sales, payload identik)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"product_id\": \"\",\n      \"variant_id\": null,\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "transactions"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List transaksi (alias sales; untuk rentang tanggal pakai from/to)\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get transaction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/transactions/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "transactions",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail transaksi + items (alias sales)\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel transaction",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/transactions/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "transactions",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "kopi-nusantara"
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Batalkan transaksi pending (alias sales)\n\nAuth: `org`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Categories",
       "description": "Module categories",
       "item": [

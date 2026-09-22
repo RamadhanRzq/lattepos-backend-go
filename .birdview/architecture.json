@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "language": "en",
   "mapId": "lattepos-backend",
-  "revision": 12,
+  "revision": 13,
   "project": {
     "id": "lattepos-backend",
     "name": "LattePOS Backend (Go)"
@@ -118,7 +118,7 @@
       "role": "backend",
       "name": "Router Composition",
       "kind": "local",
-      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes (auth, users, rbac, organizations, stores, products, sales, categories, variants, prices, stock, kitchen) and mounting health/docs.",
+      "responsibility": "Assembles the HTTP surface under the single /api/v1 prefix by delegating to each module RegisterRoutes (auth, users, rbac, organizations, stores, products, sales, categories, variants, prices, stock, kitchen, transactions(alias sales)) and mounting health/docs.",
       "ownership": [
         {
           "kind": "directory",
@@ -1025,6 +1025,48 @@
       "layout": {
         "row": 6,
         "column": 0
+      }
+    },
+    {
+      "id": "transactions",
+      "role": "backend",
+      "name": "Transactions",
+      "kind": "local",
+      "responsibility": "Alias /transactions di atas sales.Handler: pola route sama persis dengan sales, tanpa service/repo/tabel baru; reuse business rules snapshot harga + RequireOrgMember.",
+      "ownership": [
+        {
+          "kind": "directory",
+          "path": "internal/modules/transactions"
+        }
+      ],
+      "evidence": [
+        {
+          "path": "internal/modules/transactions/routes.go",
+          "note": "RegisterRoutes alias 4 pola /transactions delegasi ke sales.Handler.",
+          "symbol": "RegisterRoutes",
+          "line": 9,
+          "endLine": 29
+        },
+        {
+          "path": "internal/modules/transactions/routes_check_test.go",
+          "note": "Regression mux.Handler resolve 4 pola alias.",
+          "symbol": "TestAliasRoutesRegistered",
+          "line": 10,
+          "endLine": 24
+        },
+        {
+          "path": "internal/router/router.go",
+          "note": "transactions.RegisterRoutes(mux, deps.Sales, ...) reuse handler sales.",
+          "symbol": "New",
+          "line": 56,
+          "endLine": 58
+        }
+      ],
+      "status": "supported",
+      "openQuestions": [],
+      "layout": {
+        "row": 5,
+        "column": 4
       }
     }
   ],
@@ -2246,6 +2288,42 @@
           "note": "productDetailSources wires variantSvc and priceSvc into products.GetDetail.",
           "line": 180,
           "endLine": 215
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "router-delegates-transactions",
+      "from": "http-routes",
+      "to": "transactions",
+      "label": "transactions registers alias routes",
+      "kind": "dependency",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/router/router.go",
+          "note": "transactions.RegisterRoutes(mux, deps.Sales, deps.Verifier, deps.Orgs).",
+          "line": 57,
+          "endLine": 57
+        }
+      ],
+      "status": "supported",
+      "openQuestions": []
+    },
+    {
+      "id": "transactions-reuses-sales",
+      "from": "transactions",
+      "to": "sales",
+      "label": "delegates to sales.Handler",
+      "kind": "dependency",
+      "visibility": "overview",
+      "evidence": [
+        {
+          "path": "internal/modules/transactions/routes.go",
+          "note": "Terima *sales.Handler, panggil h.Create/List/ByID/Cancel.",
+          "line": 12,
+          "endLine": 29
         }
       ],
       "status": "supported",

@@ -23,6 +23,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
+	"github.com/ramadhanrzq/backend-go/internal/modules/transactions"
 	"github.com/ramadhanrzq/backend-go/internal/modules/users"
 	"github.com/ramadhanrzq/backend-go/internal/modules/variants"
 	"github.com/ramadhanrzq/backend-go/internal/router"
@@ -85,6 +86,7 @@ func run() error {
 	kitchenSvc := kitchen.NewService(kitchenRepo, storeRepo, sales.NewRepository(db))
 	productSvc := products.NewService(productRepo, storeRepo, productDetailSources{variants: variantSvc, prices: priceSvc})
 	saleSvc := sales.NewService(sales.NewRepository(db), storeRepo, productRepo, priceSvc, saleSideEffects(stockSvc, kitchenSvc))
+	txSvc := transactions.NewService(saleSvc, storeRepo)
 
 	handler := router.New(router.Deps{
 		Verifier:      authSvc,
@@ -98,6 +100,7 @@ func run() error {
 		Stores:        stores.NewHandler(storeSvc),
 		Products:      products.NewHandler(productSvc),
 		Sales:         sales.NewHandler(saleSvc),
+		Transactions:  transactions.NewHandler(txSvc),
 		Categories:    categories.NewHandler(categorySvc),
 		Variants:      variants.NewHandler(variantSvc),
 		Prices:        prices.NewHandler(priceSvc),
