@@ -2,11 +2,13 @@ package sales_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/ramadhanrzq/backend-go/internal/modules/products"
 	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
+	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
 )
 
@@ -63,6 +65,20 @@ func (s *stubRepo) Cancel(_ context.Context, _, _, id string) (*sales.Sale, erro
 	}
 	sa.Status = sales.StatusCancelled
 	return sa, nil
+}
+
+// WithTx meniru rollback postgres: snapshot items, pulihkan bila fn gagal.
+func (s *stubRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
+	snapshot := make(map[string]*sales.Sale, len(s.items))
+	for k, v := range s.items {
+		cp := *v
+		snapshot[k] = &cp
+	}
+	if err := fn(ctx); err != nil {
+		s.items = snapshot
+		return err
+	}
+	return nil
 }
 
 // stubStores: store-a milik org-a, user kasir1 punya akses.
@@ -228,6 +244,54 @@ func TestService_CreateFiresSideEffects(t *testing.T) {
 	}
 	if len(rec.kitchen) != 1 || rec.kitchen[0].ID != got.ID {
 		t.Fatalf("kitchen = %+v, mau sale %s", rec.kitchen, got.ID)
+	}
+}
+
+// stockOutErr memaksa StockOut gagal untuk productID tertentu.
+type stockOutErr struct {
+	recEffects
+	failOn string
+}
+
+func (e *stockOutErr) hook() *sales.SideEffects {
+	h := e.recEffects.hook()
+	h.StockOut = func(_ context.Context, _, _, _ string, ln sales.SaleLine, _ string) error {
+		if ln.ProductID == e.failOn {
+			return stock.ErrInsufficient
+		}
+		e.stockOut = append(e.stockOut, ln.ProductID)
+		return nil
+	}
+	return h
+}
+
+func TestService_CreateRollsBackWhenStockOutFails(t *testing.T) {
+	repo := newStubRepo()
+	effects := &stockOutErr{failOn: "prod-2"}
+	s := sales.NewService(repo, stubStores{assigned: true}, stubProducts{price: 15000}, nil, effects.hook())
+
+	_, err := s.Create(context.Background(), "org-a", "store-a", "kasir1", "cash", 0, 0, "", lines())
+	if err != sales.ErrInsufficientStock {
+		t.Fatalf("mau ErrInsufficientStock, dapat %v", err)
+	}
+	if len(repo.items) != 0 {
+		t.Fatalf("sale harus ter-rollback, tersisa %d", len(repo.items))
+	}
+}
+
+func TestService_CreateKeepsSaleWhenKitchenFails(t *testing.T) {
+	repo := newStubRepo()
+	rec := &recEffects{}
+	hook := rec.hook()
+	hook.OpenKitchen = func(context.Context, *sales.Sale) error { return errors.New("kitchen down") }
+	s := sales.NewService(repo, stubStores{assigned: true}, stubProducts{price: 15000}, nil, hook)
+
+	got, err := s.Create(context.Background(), "org-a", "store-a", "kasir1", "cash", 0, 0, "", lines())
+	if err != nil {
+		t.Fatalf("sale harus tetap sukses, dapat %v", err)
+	}
+	if len(repo.items) != 1 || repo.items[got.ID] == nil {
+		t.Fatalf("sale harus tersimpan, items=%d", len(repo.items))
 	}
 }
 

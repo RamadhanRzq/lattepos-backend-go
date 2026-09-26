@@ -74,6 +74,7 @@ type Filter struct {
 type Repository interface {
 	// Record menulis satu movement sekaligus update stok live dalam satu tx.
 	// Mengisi ID, StockBefore/After, dan CreatedAt ke struct yang diberikan.
+	// Di dalam WithTx join tx pemanggil; standalone pakai tx sendiri.
 	Record(ctx context.Context, m *StockMovement, allowNegative bool) error
 	FindByStore(ctx context.Context, orgID, storeID string, filter Filter) ([]StockMovement, int, error)
 	FindByProduct(ctx context.Context, orgID, storeID, productID string) ([]StockMovement, error)

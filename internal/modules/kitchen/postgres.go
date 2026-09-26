@@ -36,7 +36,7 @@ func (r *postgresRepository) Create(ctx context.Context, ks *KitchenSale) error 
 
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO kitchen_sales (sale_id, organization_id, store_id, status, priority, notes)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''))
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, started_at, completed_at, created_at, updated_at`,
 		ks.SaleID, ks.OrganizationID, ks.StoreID, StatusPending, ks.Priority, ks.Notes,
 	).Scan(&ks.ID, nullTime(&ks.StartedAt), nullTime(&ks.CompletedAt), &ks.CreatedAt, &ks.UpdatedAt)
@@ -52,7 +52,7 @@ func (r *postgresRepository) Create(ctx context.Context, ks *KitchenSale) error 
 		err := tx.QueryRowContext(ctx, `
 			INSERT INTO kitchen_sale_items
 				(kitchen_sale_id, sale_item_id, product_id, variant_id, quantity, status, notes)
-			VALUES ($1, $2, $3, NULLIF($4, '')::uuid, $5, $6, NULLIF($7, ''))
+			VALUES ($1, $2, $3, NULLIF($4, '')::uuid, $5, $6, $7)
 			RETURNING id, created_at, updated_at`,
 			ks.ID, it.SaleItemID, it.ProductID, nullableStr(it.VariantID),
 			it.Quantity, StatusPending, it.Notes,

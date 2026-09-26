@@ -3,10 +3,12 @@ package sales
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/ramadhanrzq/backend-go/internal/modules/prices"
 	"github.com/ramadhanrzq/backend-go/internal/modules/products"
+	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
 )
 
@@ -14,6 +16,8 @@ import (
 // stores adalah port kepemilikan + akses store; products port keberadaan
 // produk; prices port harga berlaku (fallback product.price); sideEffects
 // hook post-create (stok + dapur), boleh nil.
+// Create atomik: repo.Create + StockOut satu WithTx; StockOut gagal →
+// rollback sale. OpenKitchen best-effort setelah commit (log saja).
 type Service struct {
 	repo        Repository
 	stores      StoreChecker
@@ -88,11 +92,43 @@ func (s *Service) Create(ctx context.Context, orgID, storeID, userID, paymentMet
 		TotalAmount: total, DiscountAmount: discount, TaxAmount: tax, GrandTotal: grand,
 		PaymentMethod: paymentMethod, Status: StatusPending, Notes: notes, Items: items,
 	}
-	if err := s.repo.Create(ctx, sale); err != nil {
-		return nil, err
+	// Atomik: insert sale + StockOut per line satu WithTx. StockOut gagal
+	// (stok kurang / produk hilang) → rollback, sale tidak tersimpan.
+	if s.sideEffects != nil && s.sideEffects.StockOut != nil {
+		err := s.repo.WithTx(ctx, func(txCtx context.Context) error {
+			if err := s.repo.Create(txCtx, sale); err != nil {
+				return err
+			}
+			for _, ln := range lines {
+				if err := s.sideEffects.StockOut(txCtx, sale.OrganizationID, sale.StoreID, sale.ID, ln, sale.UserID); err != nil {
+					return mapStockError(err)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.repo.Create(ctx, sale); err != nil {
+			return nil, err
+		}
 	}
-	s.fireSideEffects(ctx, sale, lines)
+	s.openKitchenBestEffort(ctx, sale)
 	return sale, nil
+}
+
+// mapStockError menerjemahkan error domain stock ke error domain sales agar
+// handler memetakan status HTTP yang sama (400 produk / 409 stok).
+func mapStockError(err error) error {
+	switch {
+	case errors.Is(err, stock.ErrInsufficient):
+		return ErrInsufficientStock
+	case errors.Is(err, stock.ErrProductNotFound), errors.Is(err, stock.ErrVariantNotFound):
+		return ErrProductNotFound
+	default:
+		return err
+	}
 }
 
 // unitPrice mengembalikan harga berlaku untuk satu line: prices.EffectivePrice
@@ -117,20 +153,15 @@ func (s *Service) unitPrice(ctx context.Context, orgID, storeID string, ln SaleL
 	return price, nil
 }
 
-// fireSideEffects menjalankan hook post-create secara best-effort:
-// stock out per line (kegagalan stok tidak menggagalkan sale yang sudah
-// tersimpan — dibiarkan sebagai riwayat) lalu pembukaan antrian dapur.
-func (s *Service) fireSideEffects(ctx context.Context, sale *Sale, lines []SaleLine) {
-	if s.sideEffects == nil {
+// openKitchenBestEffort membuka antrian dapur setelah commit; gagal hanya
+// dicatat (sale tetap tersimpan, operator retry manual dari dashboard).
+func (s *Service) openKitchenBestEffort(ctx context.Context, sale *Sale) {
+	if s.sideEffects == nil || s.sideEffects.OpenKitchen == nil {
 		return
 	}
-	if s.sideEffects.StockOut != nil {
-		for _, ln := range lines {
-			_ = s.sideEffects.StockOut(ctx, sale.OrganizationID, sale.StoreID, sale.ID, ln, sale.UserID)
-		}
-	}
-	if s.sideEffects.OpenKitchen != nil {
-		_ = s.sideEffects.OpenKitchen(ctx, sale)
+	if err := s.sideEffects.OpenKitchen(ctx, sale); err != nil {
+		slog.Default().Warn("open kitchen gagal",
+			"sale_id", sale.ID, "store_id", sale.StoreID, "error", err)
 	}
 }
 

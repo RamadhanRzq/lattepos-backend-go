@@ -80,10 +80,15 @@ type Filter struct {
 
 // Repository adalah kontrak penyimpanan sale dan itemnya.
 // Semua query ter-scope store_id; orgID dipakai menutupi cross-org sebagai NotFound.
+// WithTx menjalankan fn dalam satu transaksi; Create/StockOut berbagi tx
+// yang sama lewat context (nested call join, gagal → rollback).
 type Repository interface {
 	// Create menyimpan sale beserta Items-nya dalam satu transaksi.
 	// Mengisi ID dan timestamp hasil insert ke struct yang diberikan.
+	// Di dalam WithTx join tx pemanggil; standalone pakai tx sendiri.
 	Create(ctx context.Context, s *Sale) error
+	// WithTx menjalankan fn dalam satu transaksi dari pool yang sama.
+	WithTx(ctx context.Context, fn func(context.Context) error) error
 	FindByID(ctx context.Context, orgID, storeID, id string) (*Sale, error)
 	FindItems(ctx context.Context, saleID string) ([]SaleItem, error)
 	FindByStore(ctx context.Context, orgID, storeID string, filter Filter) ([]Sale, int, error)

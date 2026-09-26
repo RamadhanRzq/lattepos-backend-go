@@ -85,6 +85,10 @@ func (s *stubRepo) Cancel(_ context.Context, _, _, id string) (*Sale, error) {
 	return s.sale, nil
 }
 
+func (s *stubRepo) WithTx(ctx context.Context, fn func(context.Context) error) error {
+	return fn(ctx)
+}
+
 type stubStores struct {
 	found    bool
 	assigned bool

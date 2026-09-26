@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+	"github.com/ramadhanrzq/backend-go/internal/dbtx"
 )
 
 type postgresRepository struct {
@@ -20,6 +21,15 @@ func NewRepository(db *sql.DB) Repository {
 	return &postgresRepository{db: db}
 }
 
+// getDB mengembalikan tx dari context bila StockOut berbagi WithTx sale,
+// kalau tidak ya koneksi pool biasa.
+func (r *postgresRepository) getDB(ctx context.Context) dbtx.DB {
+	if tx, ok := dbtx.From(ctx); ok {
+		return tx
+	}
+	return r.db
+}
+
 // movementColumns COALESCE nullable ke zero-value aman untuk Scan.
 const movementColumns = "id, organization_id, store_id, product_id, COALESCE(variant_id::text, ''), type, quantity, stock_before, stock_after, COALESCE(reference_type, ''), COALESCE(reference_id::text, ''), COALESCE(notes, ''), COALESCE(created_by::text, ''), created_at"
 
@@ -28,17 +38,25 @@ const movementColumns = "id, organization_id, store_id, product_id, COALESCE(var
 // dilipat ke dalam tx ini supaya baca-stok + tulis-movement + update-stok atomik
 // (tanpa race antar pencatatan bersamaan); service hanya validasi + delegasi.
 func (r *postgresRepository) Record(ctx context.Context, m *StockMovement, allowNegative bool) error {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("postgres: begin stock movement: %w", err)
+	// Join tx pemanggil bila dipanggil dalam WithTx (atomic sale+stok),
+	// standalone begin/commit sendiri seperti sebelumnya.
+	if _, ok := dbtx.From(ctx); ok {
+		return r.insertMovement(ctx, r.getDB(ctx), m, allowNegative)
 	}
-	defer tx.Rollback()
+	return dbtx.WithTx(r.db, ctx, func(txCtx context.Context) error {
+		return r.insertMovement(txCtx, r.getDB(txCtx), m, allowNegative)
+	})
+}
 
+// insertMovement menjalankan lock-stok + tulis movement + update live ke q
+// (tx atau pool); tanpa begin/commit.
+func (r *postgresRepository) insertMovement(ctx context.Context, q dbtx.DB, m *StockMovement, allowNegative bool) error {
 	var before int
 	if m.VariantID != nil && strings.TrimSpace(*m.VariantID) != "" {
-		err = tx.QueryRowContext(ctx, `
+		err := q.QueryRowContext(ctx, `
 			SELECT stock FROM product_variants
-			WHERE id = $1 FOR UPDATE`, *m.VariantID).Scan(&before)
+			WHERE organization_id = $1 AND store_id = $2 AND product_id = $3 AND id = $4
+			FOR NO KEY UPDATE`, m.OrganizationID, m.StoreID, m.ProductID, *m.VariantID).Scan(&before)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return ErrVariantNotFound
@@ -46,10 +64,10 @@ func (r *postgresRepository) Record(ctx context.Context, m *StockMovement, allow
 			return fmt.Errorf("postgres: lock variant stock: %w", err)
 		}
 	} else {
-		err = tx.QueryRowContext(ctx, `
+		err := q.QueryRowContext(ctx, `
 			SELECT stock FROM products
 			WHERE organization_id = $1 AND store_id = $2 AND id = $3 AND deleted_at IS NULL
-			FOR UPDATE`, m.OrganizationID, m.StoreID, m.ProductID).Scan(&before)
+			FOR NO KEY UPDATE`, m.OrganizationID, m.StoreID, m.ProductID).Scan(&before)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return ErrProductNotFound
@@ -77,8 +95,7 @@ func (r *postgresRepository) Record(ctx context.Context, m *StockMovement, allow
 	}
 	m.StockBefore = before
 	m.StockAfter = after
-
-	err = tx.QueryRowContext(ctx, `
+	err := q.QueryRowContext(ctx, `
 		INSERT INTO stock_movements (organization_id, store_id, product_id, variant_id, type, quantity, stock_before, stock_after, reference_type, reference_id, notes, created_by)
 		VALUES ($1, $2, $3, NULLIF($4, '')::uuid, $5, $6, $7, $8, NULLIF($9, ''), NULLIF($10, '')::uuid, NULLIF($11, ''), NULLIF($12, '')::uuid)
 		RETURNING id, created_at`,
@@ -98,17 +115,13 @@ func (r *postgresRepository) Record(ctx context.Context, m *StockMovement, allow
 	}
 
 	if m.VariantID != nil && strings.TrimSpace(*m.VariantID) != "" {
-		if _, err := tx.ExecContext(ctx, `UPDATE product_variants SET stock = $2 WHERE id = $1`, *m.VariantID, after); err != nil {
+		if _, err := q.ExecContext(ctx, `UPDATE product_variants SET stock = $2 WHERE organization_id = $3 AND store_id = $4 AND product_id = $5 AND id = $1`, *m.VariantID, after, m.OrganizationID, m.StoreID, m.ProductID); err != nil {
 			return mapWriteError(err)
 		}
 	} else {
-		if _, err := tx.ExecContext(ctx, `UPDATE products SET stock = $2, updated_at = NOW() WHERE id = $1`, m.ProductID, after); err != nil {
+		if _, err := q.ExecContext(ctx, `UPDATE products SET stock = $2, updated_at = NOW() WHERE id = $1`, m.ProductID, after); err != nil {
 			return mapWriteError(err)
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("postgres: commit stock movement: %w", err)
 	}
 	return nil
 }
@@ -117,7 +130,7 @@ func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID str
 	where, args := buildFilter(orgID, storeID, filter)
 
 	var total int
-	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM stock_movements `+where, args...).Scan(&total); err != nil {
+	if err := r.getDB(ctx).QueryRowContext(ctx, `SELECT COUNT(*) FROM stock_movements `+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("postgres: count stock movements: %w", err)
 	}
 
@@ -129,7 +142,7 @@ func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID str
 		limit = 20
 	}
 	args = append(args, limit, (page-1)*limit)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.getDB(ctx).QueryContext(ctx, `
 		SELECT `+movementColumns+`
 		FROM stock_movements `+where+`
 		ORDER BY created_at DESC
@@ -154,7 +167,7 @@ func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID str
 }
 
 func (r *postgresRepository) FindByProduct(ctx context.Context, orgID, storeID, productID string) ([]StockMovement, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.getDB(ctx).QueryContext(ctx, `
 		SELECT `+movementColumns+`
 		FROM stock_movements
 		WHERE organization_id = $1 AND store_id = $2 AND product_id = $3
@@ -180,7 +193,7 @@ func (r *postgresRepository) FindByProduct(ctx context.Context, orgID, storeID, 
 
 func (r *postgresRepository) GetSummary(ctx context.Context, orgID, storeID, productID string) (*StockSummary, error) {
 	var stock int
-	err := r.db.QueryRowContext(ctx, `
+	err := r.getDB(ctx).QueryRowContext(ctx, `
 		SELECT stock FROM products
 		WHERE organization_id = $1 AND store_id = $2 AND id = $3 AND deleted_at IS NULL`,
 		orgID, storeID, productID).Scan(&stock)
@@ -191,7 +204,7 @@ func (r *postgresRepository) GetSummary(ctx context.Context, orgID, storeID, pro
 		return nil, fmt.Errorf("postgres: product stock: %w", err)
 	}
 
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.getDB(ctx).QueryContext(ctx, `
 		SELECT id, stock FROM product_variants
 		WHERE product_id = $1`, productID)
 	if err != nil {

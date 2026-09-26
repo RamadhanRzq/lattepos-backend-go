@@ -8,10 +8,25 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+	"github.com/ramadhanrzq/backend-go/internal/dbtx"
 )
 
 type postgresRepository struct {
 	db *sql.DB
+}
+
+// getDB mengembalikan tx dari context bila Create/StockOut berbagi WithTx,
+// kalau tidak ya koneksi pool biasa.
+func (r *postgresRepository) getDB(ctx context.Context) dbtx.DB {
+	if tx, ok := dbtx.From(ctx); ok {
+		return tx
+	}
+	return r.db
+}
+
+// WithTx menjalankan fn dalam satu transaksi; nested call join tx yang sama.
+func (r *postgresRepository) WithTx(ctx context.Context, fn func(context.Context) error) error {
+	return dbtx.WithTx(r.db, ctx, fn)
 }
 
 var _ Repository = (*postgresRepository)(nil)
@@ -24,13 +39,19 @@ func NewRepository(db *sql.DB) Repository {
 const saleColumns = "id, store_id, organization_id, user_id, total_amount, discount_amount, tax_amount, grand_total, payment_method, status, COALESCE(notes, ''), created_at, updated_at"
 
 func (r *postgresRepository) Create(ctx context.Context, s *Sale) error {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("postgres: begin sale: %w", err)
+	// Join tx pemanggil bila dipanggil dalam WithTx (atomic sale+stok),
+	// standalone begin/commit sendiri seperti sebelumnya.
+	if _, ok := dbtx.From(ctx); ok {
+		return r.insertSale(ctx, r.getDB(ctx), s)
 	}
-	defer tx.Rollback()
+	return r.WithTx(ctx, func(txCtx context.Context) error {
+		return r.insertSale(txCtx, r.getDB(txCtx), s)
+	})
+}
 
-	err = tx.QueryRowContext(ctx, `
+// insertSale menulis header + items ke q (tx atau pool); tanpa begin/commit.
+func (r *postgresRepository) insertSale(ctx context.Context, q dbtx.DB, s *Sale) error {
+	err := q.QueryRowContext(ctx, `
 		INSERT INTO sales (store_id, organization_id, user_id, total_amount, discount_amount, tax_amount, grand_total, payment_method, status, notes)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10, ''))
 		RETURNING id, created_at, updated_at`,
@@ -45,7 +66,7 @@ func (r *postgresRepository) Create(ctx context.Context, s *Sale) error {
 	for i := range s.Items {
 		it := &s.Items[i]
 		it.SaleID = s.ID
-		err := tx.QueryRowContext(ctx, `
+		err := q.QueryRowContext(ctx, `
 			INSERT INTO sale_items (sale_id, product_id, variant_id, quantity, unit_price, subtotal)
 			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING id, created_at`,
@@ -55,15 +76,12 @@ func (r *postgresRepository) Create(ctx context.Context, s *Sale) error {
 			return mapCreateError(err)
 		}
 	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("postgres: commit sale: %w", err)
-	}
 	return nil
 }
 
 func (r *postgresRepository) FindByID(ctx context.Context, orgID, storeID, id string) (*Sale, error) {
 	var s Sale
-	err := r.db.QueryRowContext(ctx, `
+	err := r.getDB(ctx).QueryRowContext(ctx, `
 		SELECT `+saleColumns+`
 		FROM sales
 		WHERE organization_id = $1 AND store_id = $2 AND id = $3
@@ -74,7 +92,7 @@ func (r *postgresRepository) FindByID(ctx context.Context, orgID, storeID, id st
 		}
 		return nil, fmt.Errorf("postgres: find sale: %w", err)
 	}
-	items, err := scanTxItems(ctx, r.db, s.ID)
+	items, err := scanTxItems(ctx, r.getDB(ctx), s.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,14 +101,14 @@ func (r *postgresRepository) FindByID(ctx context.Context, orgID, storeID, id st
 }
 
 func (r *postgresRepository) FindItems(ctx context.Context, saleID string) ([]SaleItem, error) {
-	return scanTxItems(ctx, r.db, saleID)
+	return scanTxItems(ctx, r.getDB(ctx), saleID)
 }
 
 func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID string, filter Filter) ([]Sale, int, error) {
 	where, args := buildFilter(orgID, storeID, filter)
 
 	var total int
-	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sales `+where, args...).Scan(&total); err != nil {
+	if err := r.getDB(ctx).QueryRowContext(ctx, `SELECT COUNT(*) FROM sales `+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("postgres: count sales: %w", err)
 	}
 
@@ -102,7 +120,7 @@ func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID str
 		limit = 20
 	}
 	args = append(args, limit, (page-1)*limit)
-	rows, err := r.db.QueryContext(ctx, `
+	rows, err := r.getDB(ctx).QueryContext(ctx, `
 		SELECT `+saleColumns+`
 		FROM sales `+where+`
 		ORDER BY created_at DESC
@@ -130,7 +148,7 @@ func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID str
 // sekaligus enforcement; 0 baris = NotFound bila missing/sudah final.
 func (r *postgresRepository) Cancel(ctx context.Context, orgID, storeID, id string) (*Sale, error) {
 	var s Sale
-	err := r.db.QueryRowContext(ctx, `
+	err := r.getDB(ctx).QueryRowContext(ctx, `
 		UPDATE sales
 		SET status = $4, updated_at = NOW()
 		WHERE organization_id = $1 AND store_id = $2 AND id = $3 AND status = $5
@@ -149,7 +167,7 @@ func (r *postgresRepository) Cancel(ctx context.Context, orgID, storeID, id stri
 		}
 		return nil, fmt.Errorf("postgres: cancel sale: %w", err)
 	}
-	items, err := scanTxItems(ctx, r.db, s.ID)
+	items, err := scanTxItems(ctx, r.getDB(ctx), s.ID)
 	if err != nil {
 		return nil, err
 	}
