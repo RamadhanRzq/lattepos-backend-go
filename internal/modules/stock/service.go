@@ -79,6 +79,51 @@ func (s *Service) List(ctx context.Context, orgID, storeID, userID string, filte
 	return s.repo.FindByStore(ctx, orgID, storeID, filter)
 }
 
+// RestoreConsumed mengembalikan stok semua bahan yang keluar lewat satu
+// reference (mis. seluruh konsumsi resep satu sale) dengan mencatat movement
+// return per baris. Return = jumlah baris yang dipulihkan (0 bila tidak ada),
+// jadi pemanggil tahu apakah sale ini memang mengonsumsi bahan lewat resep.
+func (s *Service) RestoreConsumed(ctx context.Context, orgID, storeID, referenceType, referenceID, notes, createdBy string) (int, error) {
+	orgID = strings.TrimSpace(orgID)
+	storeID = strings.TrimSpace(storeID)
+	referenceType = strings.TrimSpace(referenceType)
+	referenceID = strings.TrimSpace(referenceID)
+	createdBy = strings.TrimSpace(createdBy)
+	if orgID == "" || storeID == "" || referenceType == "" || referenceID == "" || createdBy == "" {
+		return 0, ErrInvalidInput
+	}
+	if err := s.authorize(ctx, orgID, storeID, createdBy); err != nil {
+		return 0, err
+	}
+	movements, err := s.repo.FindByReference(ctx, orgID, storeID, referenceType, referenceID)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, m := range movements {
+		if m.Type != TypeOut {
+			continue
+		}
+		back := &StockMovement{
+			OrganizationID: orgID,
+			StoreID:        storeID,
+			ProductID:      m.ProductID,
+			VariantID:      m.VariantID,
+			Type:           TypeReturn,
+			Quantity:       m.Quantity,
+			ReferenceType:  referenceType,
+			ReferenceID:    referenceID,
+			Notes:          notes,
+			CreatedBy:      createdBy,
+		}
+		if err := s.repo.Record(ctx, back, false); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}
+
 // StockByProduct mengembalikan ringkasan stok live + riwayat movement produk.
 func (s *Service) StockByProduct(ctx context.Context, orgID, storeID, userID, productID string) (*StockSummary, []StockMovement, error) {
 	if err := s.authorize(ctx, orgID, storeID, userID); err != nil {

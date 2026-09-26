@@ -20,6 +20,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/prices"
 	"github.com/ramadhanrzq/backend-go/internal/modules/products"
 	"github.com/ramadhanrzq/backend-go/internal/modules/rbac"
+	"github.com/ramadhanrzq/backend-go/internal/modules/recipes"
 	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
@@ -78,14 +79,16 @@ func run() error {
 	categoryRepo := categories.NewRepository(db)
 	stockRepo := stock.NewRepository(db)
 	kitchenRepo := kitchen.NewRepository(db)
+	recipeRepo := recipes.NewRepository(db)
 
 	variantSvc := variants.NewService(variantRepo, storeRepo, productRepo)
 	priceSvc := prices.NewService(priceRepo, storeRepo, productRepo, variantRepo)
 	categorySvc := categories.NewService(categoryRepo, storeRepo)
 	stockSvc := stock.NewService(stockRepo, storeRepo)
+	recipeSvc := recipes.NewService(recipeRepo, storeRepo, productRepo, stockSvc)
 	kitchenSvc := kitchen.NewService(kitchenRepo, storeRepo, sales.NewRepository(db))
 	productSvc := products.NewService(productRepo, storeRepo, productDetailSources{variants: variantSvc, prices: priceSvc})
-	saleSvc := sales.NewService(sales.NewRepository(db), storeRepo, productRepo, priceSvc, saleSideEffects(stockSvc, kitchenSvc))
+	saleSvc := sales.NewService(sales.NewRepository(db), storeRepo, productRepo, priceSvc, saleSideEffects(stockSvc, recipeSvc, kitchenSvc))
 	txSvc := transactions.NewService(saleSvc, storeRepo)
 
 	handler := router.New(router.Deps{
@@ -105,6 +108,7 @@ func run() error {
 		Variants:      variants.NewHandler(variantSvc),
 		Prices:        prices.NewHandler(priceSvc),
 		Stock:         stock.NewHandler(stockSvc),
+		Recipes:       recipes.NewHandler(recipeSvc),
 		Kitchen:       kitchen.NewHandler(kitchenSvc),
 	})
 
@@ -145,11 +149,29 @@ func run() error {
 // saleSideEffects merakit efek samping sale dari module stock dan kitchen.
 // Gagal stok/kitchen setelah sale tersimpan dibatalkan balik (best-effort):
 // state tetap konsisten, caller menerima error penyebabnya.
-func saleSideEffects(stockSvc *stock.Service, kitchenSvc *kitchen.Service) *sales.SideEffects {
+func saleSideEffects(stockSvc *stock.Service, recipeSvc *recipes.Service, kitchenSvc *kitchen.Service) *sales.SideEffects {
 	return &sales.SideEffects{
 		StockOut: func(ctx context.Context, orgID, storeID, saleID string, ln sales.SaleLine, createdBy string) error {
 			_, err := stockSvc.Record(ctx, orgID, storeID, ln.ProductID, ln.VariantID,
 				stock.TypeOut, ln.Quantity, "sale", saleID, "auto dari sale "+saleID, createdBy, false)
+			return err
+		},
+		// HasRecipe memberi tahu sales bahwa product ini ketersediaannya
+		// bergantung bahan baku, bukan kolom stock produk sendiri.
+		HasRecipe: func(ctx context.Context, orgID, storeID, productID string) (bool, error) {
+			return recipeSvc.HasActiveRecipe(ctx, orgID, storeID, productID)
+		},
+		// ConsumeRecipe mengurangi bahan baku sesuai resep aktif product.
+		// Dipanggil di dalam WithTx sale supaya pengurangan bahan atomik dengan
+		// penjualan: stok bahan kurang → sale ikut rollback.
+		ConsumeRecipe: func(ctx context.Context, orgID, storeID, saleID string, ln sales.SaleLine, createdBy string) error {
+			_, err := recipeSvc.Consume(ctx, orgID, storeID, ln.ProductID, ln.Quantity, saleID, createdBy)
+			return err
+		},
+		// RestockRecipe mengembalikan bahan yang dikonsumsi sale yang dibatalkan.
+		RestockRecipe: func(ctx context.Context, sa *sales.Sale) error {
+			_, err := stockSvc.RestoreConsumed(ctx, sa.OrganizationID, sa.StoreID,
+				recipes.ReferenceType, sa.ID, "batal resep dari sale "+sa.ID, sa.UserID)
 			return err
 		},
 		OpenKitchen: func(ctx context.Context, sa *sales.Sale) error {
@@ -168,6 +190,14 @@ func saleSideEffects(stockSvc *stock.Service, kitchenSvc *kitchen.Service) *sale
 		},
 		Restock: func(ctx context.Context, sa *sales.Sale) error {
 			for _, it := range sa.Items {
+				// Product berresep tidak pernah dipotong stoknya saat jual,
+				// jadi tidak boleh ditambah balik di sini; bahannya yang
+				// dikembalikan lewat RestockRecipe.
+				if ok, err := recipeSvc.HasActiveRecipe(ctx, sa.OrganizationID, sa.StoreID, it.ProductID); err != nil {
+					return err
+				} else if ok {
+					continue
+				}
 				if _, err := stockSvc.Record(ctx, sa.OrganizationID, sa.StoreID, it.ProductID, it.VariantID,
 					stock.TypeIn, it.Quantity, "sale-cancel", sa.ID, "restock dari pembatalan sale "+sa.ID, sa.UserID, false); err != nil {
 					return err

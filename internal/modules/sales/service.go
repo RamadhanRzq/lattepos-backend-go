@@ -63,6 +63,7 @@ func (s *Service) Create(ctx context.Context, orgID, storeID, userID, paymentMet
 	// live per line di server, bukan dari client.
 	var total int64
 	items := make([]SaleItem, len(lines))
+	recipeLines := make([]bool, len(lines))
 	for i, ln := range lines {
 		p, err := s.products.FindByID(ctx, orgID, storeID, ln.ProductID)
 		if err != nil {
@@ -75,7 +76,10 @@ func (s *Service) Create(ctx context.Context, orgID, storeID, userID, paymentMet
 		if err != nil {
 			return nil, err
 		}
-		if ln.VariantID == nil && p.Stock < ln.Quantity {
+		// Product berresep tidak memakai stoknya sendiri: ketersediaan
+		// ditentukan stok bahan baku, jadi gate + potong stok produk dilewati.
+		recipeLines[i] = ln.VariantID == nil && s.hasActiveRecipe(ctx, orgID, storeID, ln.ProductID)
+		if ln.VariantID == nil && !recipeLines[i] && p.Stock < ln.Quantity {
 			return nil, ErrInsufficientStock
 		}
 		sub := unitPrice * int64(ln.Quantity)
@@ -94,14 +98,23 @@ func (s *Service) Create(ctx context.Context, orgID, storeID, userID, paymentMet
 	}
 	// Atomik: insert sale + StockOut per line satu WithTx. StockOut gagal
 	// (stok kurang / produk hilang) → rollback, sale tidak tersimpan.
+	// ConsumeRecipe ikut tx yang sama supaya bahan baku berkurang tepat
+	// ketika sale tersimpan; gagal → seluruh sale dibatalkan.
 	if s.sideEffects != nil && s.sideEffects.StockOut != nil {
 		err := s.repo.WithTx(ctx, func(txCtx context.Context) error {
 			if err := s.repo.Create(txCtx, sale); err != nil {
 				return err
 			}
-			for _, ln := range lines {
-				if err := s.sideEffects.StockOut(txCtx, sale.OrganizationID, sale.StoreID, sale.ID, ln, sale.UserID); err != nil {
-					return mapStockError(err)
+			for i, ln := range lines {
+				if !recipeLines[i] {
+					if err := s.sideEffects.StockOut(txCtx, sale.OrganizationID, sale.StoreID, sale.ID, ln, sale.UserID); err != nil {
+						return mapStockError(err)
+					}
+				}
+				if s.sideEffects.ConsumeRecipe != nil {
+					if err := s.sideEffects.ConsumeRecipe(txCtx, sale.OrganizationID, sale.StoreID, sale.ID, ln, sale.UserID); err != nil {
+						return mapStockError(err)
+					}
 				}
 			}
 			return nil
@@ -116,6 +129,19 @@ func (s *Service) Create(ctx context.Context, orgID, storeID, userID, paymentMet
 	}
 	s.openKitchenBestEffort(ctx, sale)
 	return sale, nil
+}
+
+// hasActiveRecipe melaporkan apakah product punya resep aktif. Tanpa port
+// (sideEffects/hasRecipe nil) dianggap tidak ada resep: perilaku lama.
+func (s *Service) hasActiveRecipe(ctx context.Context, orgID, storeID, productID string) bool {
+	if s.sideEffects == nil || s.sideEffects.HasRecipe == nil {
+		return false
+	}
+	ok, err := s.sideEffects.HasRecipe(ctx, orgID, storeID, productID)
+	if err != nil {
+		return false
+	}
+	return ok
 }
 
 // mapStockError menerjemahkan error domain stock ke error domain sales agar
@@ -209,6 +235,11 @@ func (s *Service) Cancel(ctx context.Context, orgID, storeID, userID, id string)
 	if s.sideEffects != nil {
 		if s.sideEffects.Restock != nil {
 			if rerr := s.sideEffects.Restock(ctx, sale); rerr != nil {
+				return sale, rerr
+			}
+		}
+		if s.sideEffects.RestockRecipe != nil {
+			if rerr := s.sideEffects.RestockRecipe(ctx, sale); rerr != nil {
 				return sale, rerr
 			}
 		}

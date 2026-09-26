@@ -12,6 +12,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/prices"
 	"github.com/ramadhanrzq/backend-go/internal/modules/products"
 	"github.com/ramadhanrzq/backend-go/internal/modules/rbac"
+	"github.com/ramadhanrzq/backend-go/internal/modules/recipes"
 	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
@@ -40,6 +41,7 @@ type Deps struct {
 	Variants      *variants.Handler
 	Prices        *prices.Handler
 	Stock         *stock.Handler
+	Recipes       *recipes.Handler
 	Kitchen       *kitchen.Handler
 }
 
@@ -61,6 +63,7 @@ func New(deps Deps) http.Handler {
 	variants.RegisterRoutes(mux, deps.Variants, deps.Verifier, deps.Orgs)
 	prices.RegisterRoutes(mux, deps.Prices, deps.Verifier, deps.Orgs)
 	stock.RegisterRoutes(mux, deps.Stock, deps.Verifier, deps.Orgs)
+	recipes.RegisterRoutes(mux, deps.Recipes, deps.Verifier, deps.Orgs)
 	kitchen.RegisterRoutes(mux, deps.Kitchen, deps.Verifier, deps.Orgs)
 	return middleware.CORS(deps.CORSConfig, middleware.Logger(mux))
 }

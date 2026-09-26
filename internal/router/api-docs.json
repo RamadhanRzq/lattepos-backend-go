@@ -2962,6 +2962,338 @@
       ]
     },
     {
+      "name": "Recipes",
+      "description": "Module recipes",
+      "item": [
+        {
+          "name": "Create recipe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/recipes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "recipes"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Buat resep (versi unik per product, is_active true menonaktifkan versi lain)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Es Kopi Susu Gula Aren\",\n  \"version\": 1,\n  \"yield_quantity\": 1,\n  \"is_active\": true,\n  \"notes\": \"Resep standar barista\",\n  \"items\": [\n    {\n      \"ingredient_product_id\": \"<uuid bahan susu>\",\n      \"quantity\": 250,\n      \"unit\": \"ml\",\n      \"wastage_percentage\": 0,\n      \"notes\": \"Susu UHT dingin\"\n    },\n    {\n      \"ingredient_product_id\": \"<uuid bahan espresso>\",\n      \"quantity\": 20,\n      \"unit\": \"ml\",\n      \"wastage_percentage\": 0,\n      \"notes\": \"Dua shot espresso\"\n    },\n    {\n      \"ingredient_product_id\": \"<uuid bahan gula aren>\",\n      \"quantity\": 15,\n      \"unit\": \"ml\",\n      \"wastage_percentage\": 5,\n      \"notes\": \"Sirup gula aren\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List recipes by product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/recipes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "recipes"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "List semua versi resep satu product\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "List recipes by store",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/recipes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "recipes"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "List semua resep satu store\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get recipe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/recipes/:recipeId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "recipes",
+                ":recipeId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "recipeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Detail resep beserta bahannya\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Update recipe",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/recipes/:recipeId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "recipes",
+                ":recipeId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "recipeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Update resep (full replace termasuk daftar bahan)\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Es Kopi Susu Gula Aren\",\n  \"version\": 1,\n  \"yield_quantity\": 1,\n  \"is_active\": true,\n  \"notes\": \"Resep standar barista\",\n  \"items\": [\n    {\n      \"ingredient_product_id\": \"<uuid bahan susu>\",\n      \"quantity\": 250,\n      \"unit\": \"ml\",\n      \"wastage_percentage\": 0,\n      \"notes\": \"Susu UHT dingin\"\n    },\n    {\n      \"ingredient_product_id\": \"<uuid bahan espresso>\",\n      \"quantity\": 20,\n      \"unit\": \"ml\",\n      \"wastage_percentage\": 0,\n      \"notes\": \"Dua shot espresso\"\n    },\n    {\n      \"ingredient_product_id\": \"<uuid bahan gula aren>\",\n      \"quantity\": 15,\n      \"unit\": \"ml\",\n      \"wastage_percentage\": 5,\n      \"notes\": \"Sirup gula aren\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete recipe",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/recipes/:recipeId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "recipes",
+                ":recipeId"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "recipeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Hapus resep beserta bahannya\n\nAuth: `org`."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate recipe",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/org/:slug/stores/:storeId/products/:productId/recipes/:recipeId/activate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "org",
+                ":slug",
+                "stores",
+                ":storeId",
+                "products",
+                ":productId",
+                "recipes",
+                ":recipeId",
+                "activate"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                },
+                {
+                  "key": "storeId",
+                  "value": ""
+                },
+                {
+                  "key": "productId",
+                  "value": ""
+                },
+                {
+                  "key": "recipeId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Aktifkan/nonaktifkan versi resep; aktif menonaktifkan versi lain\n\nAuth: `org`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Kitchen",
       "description": "Module kitchen",
       "item": [

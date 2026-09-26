@@ -20,6 +20,7 @@ type stubRepo struct {
 	recordFn      func(ctx context.Context, m *StockMovement, allowNeg bool) error
 	findByStoreFn func(ctx context.Context, orgID, storeID string, f Filter) ([]StockMovement, int, error)
 	findByProdFn  func(ctx context.Context, orgID, storeID, prodID string) ([]StockMovement, error)
+	findByRefFn   func(ctx context.Context, orgID, storeID, refType, refID string) ([]StockMovement, error)
 	getSummaryFn  func(ctx context.Context, orgID, storeID, prodID string) (*StockSummary, error)
 }
 
@@ -31,6 +32,12 @@ func (s *stubRepo) FindByStore(ctx context.Context, orgID, storeID string, f Fil
 }
 func (s *stubRepo) FindByProduct(ctx context.Context, orgID, storeID, prodID string) ([]StockMovement, error) {
 	return s.findByProdFn(ctx, orgID, storeID, prodID)
+}
+func (s *stubRepo) FindByReference(ctx context.Context, orgID, storeID, refType, refID string) ([]StockMovement, error) {
+	if s.findByRefFn == nil {
+		return []StockMovement{}, nil
+	}
+	return s.findByRefFn(ctx, orgID, storeID, refType, refID)
 }
 func (s *stubRepo) GetSummary(ctx context.Context, orgID, storeID, prodID string) (*StockSummary, error) {
 	return s.getSummaryFn(ctx, orgID, storeID, prodID)

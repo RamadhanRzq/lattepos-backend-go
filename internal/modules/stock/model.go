@@ -78,6 +78,9 @@ type Repository interface {
 	Record(ctx context.Context, m *StockMovement, allowNegative bool) error
 	FindByStore(ctx context.Context, orgID, storeID string, filter Filter) ([]StockMovement, int, error)
 	FindByProduct(ctx context.Context, orgID, storeID, productID string) ([]StockMovement, error)
+	// FindByReference mengambil semua movement yang menunjuk satu dokumen
+	// sumber (mis. seluruh konsumsi bahan satu sale) untuk dibalik saat cancel.
+	FindByReference(ctx context.Context, orgID, storeID, referenceType, referenceID string) ([]StockMovement, error)
 	GetSummary(ctx context.Context, orgID, storeID, productID string) (*StockSummary, error)
 }
 

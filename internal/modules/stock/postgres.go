@@ -191,6 +191,30 @@ func (r *postgresRepository) FindByProduct(ctx context.Context, orgID, storeID, 
 	return list, nil
 }
 
+// FindByReference mengambil movement yang menunjuk satu dokumen sumber,
+// mis. seluruh konsumsi bahan (reference_type=recipe) satu sale.
+func (r *postgresRepository) FindByReference(ctx context.Context, orgID, storeID, referenceType, referenceID string) ([]StockMovement, error) {
+	rows, err := r.getDB(ctx).QueryContext(ctx, `
+		SELECT `+movementColumns+`
+		FROM stock_movements
+		WHERE organization_id = $1 AND store_id = $2 AND reference_type = $3 AND reference_id = $4
+		ORDER BY created_at ASC`, orgID, storeID, referenceType, referenceID)
+	if err != nil {
+		return nil, fmt.Errorf("postgres: list reference movements: %w", err)
+	}
+	defer rows.Close()
+
+	list := []StockMovement{}
+	for rows.Next() {
+		var m StockMovement
+		if err := scanMovement(rows, &m); err != nil {
+			return nil, fmt.Errorf("postgres: scan stock movement: %w", err)
+		}
+		list = append(list, m)
+	}
+	return list, rows.Err()
+}
+
 func (r *postgresRepository) GetSummary(ctx context.Context, orgID, storeID, productID string) (*StockSummary, error) {
 	var stock int
 	err := r.getDB(ctx).QueryRowContext(ctx, `

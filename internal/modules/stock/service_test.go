@@ -14,6 +14,7 @@ type fakeRepo struct {
 	productStock int
 	hasProduct   bool
 	summaries    map[string]*stock.StockSummary
+	movements    []stock.StockMovement
 	err          error
 }
 
@@ -49,6 +50,7 @@ func (f *fakeRepo) Record(_ context.Context, m *stock.StockMovement, allowNegati
 	m.StockBefore = f.productStock
 	m.StockAfter = after
 	f.productStock = after
+	f.movements = append(f.movements, *m)
 	return nil
 }
 
@@ -58,6 +60,17 @@ func (f *fakeRepo) FindByStore(_ context.Context, _, _ string, _ stock.Filter) (
 
 func (f *fakeRepo) FindByProduct(_ context.Context, _, _, _ string) ([]stock.StockMovement, error) {
 	return []stock.StockMovement{}, nil
+}
+
+// movements mencatat movement yang ditulis lewat Record untuk uji restore.
+func (f *fakeRepo) FindByReference(_ context.Context, _, _, refType, refID string) ([]stock.StockMovement, error) {
+	var out []stock.StockMovement
+	for _, m := range f.movements {
+		if m.ReferenceType == refType && m.ReferenceID == refID {
+			out = append(out, m)
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeRepo) GetSummary(_ context.Context, orgID, storeID, productID string) (*stock.StockSummary, error) {

@@ -120,9 +120,21 @@ type PriceResolver interface {
 // root di atas module stock dan kitchen supaya sales tidak mengimpor keduanya
 // (patOK stores.OrgChecker); nil berarti efek samping dimatikan.
 type SideEffects struct {
+	// HasRecipe melaporkan apakah product punya resep aktif. Product berresep
+	// tidak dilacak stoknya sendiri: gate stok produk dilewati, ketersediaan
+	// ditentukan stok bahan baku. nil berarti tidak ada resep (perilaku lama).
+	HasRecipe func(ctx context.Context, orgID, storeID, productID string) (bool, error)
 	// StockOut dipanggil per line saat sale dibuat; return err diterjemahkan
 	// ke ErrInsufficientStock bila sesuai (lihat adapter di main.go).
 	StockOut func(ctx context.Context, orgID, storeID, saleID string, line SaleLine, createdBy string) error
+	// ConsumeRecipe dipanggil per line setelah StockOut di dalam tx yang sama:
+	// mengurangi bahan baku sesuai resep aktif product. Product tanpa resep
+	// aktif → no-op. Stok bahan kurang → error diterjemahkan jadi
+	// ErrInsufficientStock, sale di-rollback.
+	ConsumeRecipe func(ctx context.Context, orgID, storeID, saleID string, line SaleLine, createdBy string) error
+	// RestockRecipe mengembalikan bahan baku yang sudah dikonsumsi sale ini
+	// (kebalikan ConsumeRecipe); dipanggil setelah pembatalan.
+	RestockRecipe func(ctx context.Context, sale *Sale) error
 	// OpenKitchen dipanggil sekali setelah sale dibuat; gagal tidak
 	// menggagalkan sale (log adapter, best-effort).
 	OpenKitchen func(ctx context.Context, sale *Sale) error
