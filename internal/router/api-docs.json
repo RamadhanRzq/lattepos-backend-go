@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "lattepos-backend-api",
     "name": "LattePOS API",
-    "description": "LattePOS Backend API. Pilih environment value `baseUrl` sesuai server. Login/register lalu isi `token` (collection bearer). `{slug}` dkk sudah jadi path variable — isi via Params.",
+    "description": "LattePOS Backend API. Pilih environment value `baseUrl` sesuai server. Login/register lalu isi `token` (collection bearer). `{slug}` dkk sudah jadi path variable \u2014 isi via Params.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -95,7 +95,7 @@
                 "register"
               ]
             },
-            "description": "Registrasi user baru → access token (15m) + refresh token (30d).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
+            "description": "Registrasi user baru \u2192 access token (15m) + refresh token (30d).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"kasir01\",\n  \"name\": \"Kasir Satu\",\n  \"email\": \"kasir01@lattepos.com\",\n  \"password\": \"secret123\"\n}",
@@ -134,7 +134,7 @@
                 "login"
               ]
             },
-            "description": "Login username+password → access token (15m) + refresh token (30d).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
+            "description": "Login username+password \u2192 access token (15m) + refresh token (30d).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"kasir01\",\n  \"password\": \"secret123\"\n}",
@@ -174,7 +174,7 @@
                 "refresh"
               ]
             },
-            "description": "Token rotation: kirim refresh token lama, terima access token + refresh token baru. Token lama otomatis direvoke.\n\nReuse token yang sudah direvoke → seluruh token family direvoke (reuse detection).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
+            "description": "Token rotation: kirim refresh token lama, terima access token + refresh token baru. Token lama otomatis direvoke.\n\nReuse token yang sudah direvoke \u2192 seluruh token family direvoke (reuse detection).\n\nAuth: `publik`. Rate limited: 10 req/menit per IP.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"<refresh_token dari login/register>\"\n}",
@@ -1008,7 +1008,7 @@
                 }
               ]
             },
-            "description": "Pilih organisasi aktif → token berkonteks org\n\nAuth: `Bearer`."
+            "description": "Pilih organisasi aktif \u2192 token berkonteks org\n\nAuth: `Bearer`."
           },
           "response": []
         },
@@ -1524,7 +1524,7 @@
             "description": "Buat product (SKU unik per store)\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Kopi Tubruk\",\n  \"sku\": \"KOPI-01\",\n  \"description\": \"Kopi tubruk gula aren\",\n  \"price\": 15000,\n  \"stock\": 100,\n  \"unit\": \"pcs\",\n  \"category_id\": null,\n  \"image_url\": \"\"\n}",
+              "raw": "{\n  \"name\": \"Kopi Tubruk\",\n  \"sku\": \"KOPI-01\",\n  \"description\": \"Kopi tubruk gula aren\",\n  \"product_type\": \"MENU\",\n  \"price\": 15000,\n  \"stock\": 100,\n  \"unit\": \"pcs\",\n  \"category_id\": null,\n  \"image_url\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1566,28 +1566,27 @@
               "query": [
                 {
                   "key": "search",
-                  "value": "",
-                  "disabled": true
+                  "value": ""
                 },
                 {
                   "key": "category_id",
-                  "value": "",
-                  "disabled": true
+                  "value": ""
+                },
+                {
+                  "key": "product_type",
+                  "value": ""
                 },
                 {
                   "key": "is_active",
-                  "value": "true",
-                  "disabled": true
+                  "value": ""
                 },
                 {
                   "key": "page",
-                  "value": "1",
-                  "disabled": true
+                  "value": "1"
                 },
                 {
                   "key": "limit",
-                  "value": "20",
-                  "disabled": true
+                  "value": "20"
                 }
               ]
             },
@@ -1678,7 +1677,7 @@
             "description": "Ubah product penuh\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Kopi Tubruk\",\n  \"sku\": \"KOPI-01\",\n  \"description\": \"Kopi tubruk gula aren\",\n  \"price\": 15000,\n  \"stock\": 100,\n  \"unit\": \"pcs\",\n  \"category_id\": null,\n  \"image_url\": \"\",\n  \"is_active\": true\n}",
+              "raw": "{\n  \"name\": \"Kopi Tubruk\",\n  \"sku\": \"KOPI-01\",\n  \"description\": \"Kopi tubruk gula aren\",\n  \"product_type\": \"MENU\",\n  \"price\": 15000,\n  \"stock\": 100,\n  \"unit\": \"pcs\",\n  \"category_id\": null,\n  \"image_url\": \"\",\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1769,7 +1768,7 @@
                 }
               ]
             },
-            "description": "Buat transaksi (harga snapshot dari product, total dihitung server). Sale + pemotongan stok satu transaksi: stok kurang → 409 tanpa menyimpan sale. Antrian dapur dibuka otomatis setelah commit.\n\nAuth: `org`.",
+            "description": "Buat transaksi (harga snapshot dari product, total dihitung server). Sale + pemotongan stok satu transaksi: stok kurang \u2192 409 tanpa menyimpan sale. Antrian dapur dibuka otomatis setelah commit.\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"product_id\": \"\",\n      \"variant_id\": null,\n      \"quantity\": 1\n    }\n  ]\n}",
@@ -2006,7 +2005,7 @@
                 }
               ]
             },
-            "description": "Buat transaksi (alias sales, payload identik; sale + potong stok satu transaksi, stok kurang → 409)\n\nAuth: `org`.",
+            "description": "Buat transaksi (alias sales, payload identik; sale + potong stok satu transaksi, stok kurang \u2192 409)\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"product_id\": \"\",\n      \"variant_id\": null,\n      \"quantity\": 1\n    }\n  ]\n}",
@@ -3082,7 +3081,7 @@
                 }
               ]
             },
-            "description": "Transisi status antrian: pending→preparing→ready→served (atau cancelled)\n\nAuth: `org`.",
+            "description": "Transisi status antrian: pending\u2192preparing\u2192ready\u2192served (atau cancelled)\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"preparing\"\n}",
@@ -3143,7 +3142,7 @@
                 }
               ]
             },
-            "description": "Transisi status satu item; semua item ready → antrian naik otomatis\n\nAuth: `org`.",
+            "description": "Transisi status satu item; semua item ready \u2192 antrian naik otomatis\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"ready\"\n}",

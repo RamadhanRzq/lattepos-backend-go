@@ -1,10 +1,12 @@
 package products
 
 // CreateRequest adalah payload POST /api/v1/org/{slug}/stores/{storeId}/products.
+// product_type opsional; kosong berarti MENU (barang jual).
 type CreateRequest struct {
 	Name        string  `json:"name"`
 	SKU         string  `json:"sku"`
 	Description string  `json:"description"`
+	ProductType string  `json:"product_type"`
 	Price       int64   `json:"price"`
 	Stock       int     `json:"stock"`
 	Unit        string  `json:"unit"`
@@ -18,6 +20,7 @@ type UpdateRequest struct {
 	Name        string  `json:"name"`
 	SKU         string  `json:"sku"`
 	Description string  `json:"description"`
+	ProductType string  `json:"product_type"`
 	Price       int64   `json:"price"`
 	Stock       int     `json:"stock"`
 	Unit        string  `json:"unit"`

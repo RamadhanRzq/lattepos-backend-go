@@ -21,7 +21,7 @@ func NewService(repo Repository, stores StoreChecker, detail DetailSources) *Ser
 	return &Service{repo: repo, stores: stores, detail: detail}
 }
 
-func (s *Service) Create(ctx context.Context, orgID, storeID, createdBy, name, sku, description string, price int64, stock int, unit string, categoryID *string, imageURL string) (*Product, error) {
+func (s *Service) Create(ctx context.Context, orgID, storeID, createdBy, name, sku, description, productType string, price int64, stock int, unit string, categoryID *string, imageURL string) (*Product, error) {
 	orgID = strings.TrimSpace(orgID)
 	storeID = strings.TrimSpace(storeID)
 	name = strings.TrimSpace(name)
@@ -43,6 +43,10 @@ func (s *Service) Create(ctx context.Context, orgID, storeID, createdBy, name, s
 	}
 	if unit == "" {
 		unit = "pcs"
+	}
+	productType, err := normalizeType(productType)
+	if err != nil {
+		return nil, err
 	}
 
 	if _, err := s.stores.FindByIDInOrg(ctx, orgID, storeID); err != nil {
@@ -66,6 +70,7 @@ func (s *Service) Create(ctx context.Context, orgID, storeID, createdBy, name, s
 		Name:           name,
 		SKU:            sku,
 		Description:    description,
+		ProductType:    productType,
 		Price:          price,
 		Stock:          stock,
 		Unit:           unit,
@@ -141,7 +146,7 @@ func (s *Service) List(ctx context.Context, orgID, storeID string, filter Filter
 
 // Update full replace dalam store yang sama.
 // store_id/organization_id tidak pernah berubah: kolom itu tidak ditulis repository.
-func (s *Service) Update(ctx context.Context, orgID, storeID, id, name, sku, description string, price int64, stock int, unit string, categoryID *string, imageURL string, isActive bool) (*Product, error) {
+func (s *Service) Update(ctx context.Context, orgID, storeID, id, name, sku, description, productType string, price int64, stock int, unit string, categoryID *string, imageURL string, isActive bool) (*Product, error) {
 	orgID = strings.TrimSpace(orgID)
 	storeID = strings.TrimSpace(storeID)
 	id = strings.TrimSpace(id)
@@ -165,6 +170,10 @@ func (s *Service) Update(ctx context.Context, orgID, storeID, id, name, sku, des
 	if unit == "" {
 		unit = "pcs"
 	}
+	productType, err := normalizeType(productType)
+	if err != nil {
+		return nil, err
+	}
 
 	dup, err := s.repo.ExistsBySKU(ctx, sku, storeID, &id)
 	if err != nil {
@@ -181,6 +190,7 @@ func (s *Service) Update(ctx context.Context, orgID, storeID, id, name, sku, des
 		Name:           name,
 		SKU:            sku,
 		Description:    description,
+		ProductType:    productType,
 		Price:          price,
 		Stock:          stock,
 		Unit:           unit,
@@ -192,6 +202,18 @@ func (s *Service) Update(ctx context.Context, orgID, storeID, id, name, sku, des
 		return nil, err
 	}
 	return p, nil
+}
+
+// normalizeType memetakan input kosong ke MENU dan menolak tipe tak dikenal.
+func normalizeType(productType string) (string, error) {
+	productType = strings.ToUpper(strings.TrimSpace(productType))
+	if productType == "" {
+		return TypeMenu, nil
+	}
+	if !IsValidType(productType) {
+		return "", ErrInvalidProductType
+	}
+	return productType, nil
 }
 
 func (s *Service) Delete(ctx context.Context, orgID, storeID, id string) error {

@@ -109,7 +109,7 @@ func svc() (*products.Service, *stubRepo) {
 func TestService_Create(t *testing.T) {
 	s, _ := svc()
 
-	got, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "Kopi Susu", "KOPI-01", "", 15000, 10, "pcs", nil, "")
+	got, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "Kopi Susu", "KOPI-01", "", "", 15000, 10, "pcs", nil, "")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -117,20 +117,50 @@ func TestService_Create(t *testing.T) {
 		t.Fatalf("Create boundary/active: %+v", got)
 	}
 
-	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "", "X", "", 0, 0, "", nil, ""); !errors.Is(err, products.ErrInvalidInput) {
+	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "", "X", "", "", 0, 0, "", nil, ""); !errors.Is(err, products.ErrInvalidInput) {
 		t.Fatalf("name kosong harus ErrInvalidInput, got %v", err)
 	}
-	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "N", "TAKEN", "", 0, 0, "", nil, ""); !errors.Is(err, products.ErrSKUDuplicate) {
+	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "N", "TAKEN", "", "", 0, 0, "", nil, ""); !errors.Is(err, products.ErrSKUDuplicate) {
 		t.Fatalf("sku duplikat harus ErrSKUDuplicate, got %v", err)
 	}
-	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "N", "X", "", -1, 0, "", nil, ""); !errors.Is(err, products.ErrInvalidPrice) {
+	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "N", "X", "", "", -1, 0, "", nil, ""); !errors.Is(err, products.ErrInvalidPrice) {
 		t.Fatalf("price negatif harus ErrInvalidPrice, got %v", err)
 	}
-	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "N", "X", "", 0, -1, "", nil, ""); !errors.Is(err, products.ErrInvalidStock) {
+	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "N", "X", "", "", 0, -1, "", nil, ""); !errors.Is(err, products.ErrInvalidStock) {
 		t.Fatalf("stock negatif harus ErrInvalidStock, got %v", err)
 	}
-	if _, err := s.Create(context.Background(), "org-a", "no-store", "user-a", "N", "X", "", 0, 0, "", nil, ""); !errors.Is(err, products.ErrStoreNotFound) {
+	if _, err := s.Create(context.Background(), "org-a", "no-store", "user-a", "N", "X", "", "", 0, 0, "", nil, ""); !errors.Is(err, products.ErrStoreNotFound) {
 		t.Fatalf("store hilang harus ErrStoreNotFound, got %v", err)
+	}
+}
+
+func TestService_CreateProductType(t *testing.T) {
+	s, _ := svc()
+
+	raw, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "Susu Segar", "BB-01", "", "raw_material", 0, 500, "ml", nil, "")
+	if err != nil {
+		t.Fatalf("Create raw material: %v", err)
+	}
+	if raw.ProductType != products.TypeRawMaterial {
+		t.Fatalf("product_type harus RAW_MATERIAL, got %q", raw.ProductType)
+	}
+
+	def, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "Kopi Tubruk", "MN-01", "", "", 15000, 10, "pcs", nil, "")
+	if err != nil {
+		t.Fatalf("Create tanpa product_type: %v", err)
+	}
+	if def.ProductType != products.TypeMenu {
+		t.Fatalf("product_type default harus MENU, got %q", def.ProductType)
+	}
+
+	if _, err := s.Create(context.Background(), "org-a", "store-a", "user-a", "X", "X-01", "", "BAHAN", 0, 0, "", nil, ""); !errors.Is(err, products.ErrInvalidProductType) {
+		t.Fatalf("tipe tak dikenal harus ErrInvalidProductType, got %v", err)
+	}
+
+	if _, err := s.Update(context.Background(), "org-a", "store-a", raw.ID, "Susu Segar", "BB-01", "", "PACKAGING", 0, 500, "ml", nil, "", true); err != nil {
+		t.Fatalf("Update ke PACKAGING: %v", err)
+	} else if got, _ := s.Get(context.Background(), "org-a", "store-a", raw.ID); got.ProductType != products.TypePackaging {
+		t.Fatalf("product_type setelah update harus PACKAGING, got %q", got.ProductType)
 	}
 }
 
@@ -138,7 +168,7 @@ func TestService_TenantIsolation(t *testing.T) {
 	s, _ := svc()
 	ctx := context.Background()
 
-	st, err := s.Create(ctx, "org-a", "store-a", "user-a", "Kopi", "KOPI-01", "", 1000, 1, "", nil, "")
+	st, err := s.Create(ctx, "org-a", "store-a", "user-a", "Kopi", "KOPI-01", "", "", 1000, 1, "", nil, "")
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -168,23 +198,23 @@ func TestService_UpdateDelete(t *testing.T) {
 	s, _ := svc()
 	ctx := context.Background()
 
-	st, _ := s.Create(ctx, "org-a", "store-a", "user-a", "Kopi", "KOPI-01", "", 1000, 1, "", nil, "")
+	st, _ := s.Create(ctx, "org-a", "store-a", "user-a", "Kopi", "KOPI-01", "", "", 1000, 1, "", nil, "")
 	active := true
 
 	// SKU milik product lain di store yang sama ditolak.
-	other, _ := s.Create(ctx, "org-a", "store-a", "user-a", "Teh", "TEH-01", "", 500, 2, "", nil, "")
-	if _, err := s.Update(ctx, "org-a", "store-a", st.ID, "Kopi Baru", other.SKU, "", 1200, 3, "pcs", nil, "", active); !errors.Is(err, products.ErrSKUDuplicate) {
+	other, _ := s.Create(ctx, "org-a", "store-a", "user-a", "Teh", "TEH-01", "", "", 500, 2, "", nil, "")
+	if _, err := s.Update(ctx, "org-a", "store-a", st.ID, "Kopi Baru", other.SKU, "", "", 1200, 3, "pcs", nil, "", active); !errors.Is(err, products.ErrSKUDuplicate) {
 		t.Fatalf("sku duplikat harus ErrSKUDuplicate, got %v", err)
 	}
 
-	got, err := s.Update(ctx, "org-a", "store-a", st.ID, "Kopi Baru", "KOPI-02", "", 1200, 3, "pcs", nil, "", active)
+	got, err := s.Update(ctx, "org-a", "store-a", st.ID, "Kopi Baru", "KOPI-02", "", "", 1200, 3, "pcs", nil, "", active)
 	if err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 	if got.Name != "Kopi Baru" || got.StoreID != "store-a" || got.OrganizationID != "org-a" {
 		t.Fatalf("Update pindah scope: %+v", got)
 	}
-	if _, err := s.Update(ctx, "org-b", "store-a", st.ID, "X", "X", "", 0, 0, "", nil, "", active); !errors.Is(err, products.ErrNotFound) {
+	if _, err := s.Update(ctx, "org-b", "store-a", st.ID, "X", "X", "", "", 0, 0, "", nil, "", active); !errors.Is(err, products.ErrNotFound) {
 		t.Fatalf("update org lain harus NotFound, got %v", err)
 	}
 

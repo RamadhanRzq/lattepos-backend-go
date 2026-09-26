@@ -132,6 +132,22 @@ func TestCreate_Success(t *testing.T) {
 	}
 }
 
+// product_type tak dikenal harus 400, bukan tersimpan apa adanya.
+func TestCreate_InvalidProductType(t *testing.T) {
+	h := newTestHandler(&mockRepo{}, nil)
+
+	b, _ := json.Marshal(CreateRequest{Name: "Susu", SKU: "BB-01", ProductType: "BAHAN"})
+	r := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(b))
+	r = withOrgID(r, "org-1")
+	r.SetPathValue("storeId", "store-1")
+
+	w := httptest.NewRecorder()
+	h.Create(w, r)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestCreate_MissingOrgID(t *testing.T) {
 	h := newTestHandler(&mockRepo{}, nil)
 	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{}`))

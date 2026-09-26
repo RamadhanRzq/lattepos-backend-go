@@ -21,16 +21,16 @@ func NewRepository(db *sql.DB) Repository {
 }
 
 // productColumns COALESCE nullable ke zero-value aman untuk Scan.
-const productColumns = "id, store_id, organization_id, name, sku, COALESCE(description, ''), price, stock, COALESCE(unit, 'pcs'), category_id, COALESCE(image_url, ''), is_active, COALESCE(created_by::text, ''), created_at, updated_at, deleted_at"
+const productColumns = "id, store_id, organization_id, name, sku, COALESCE(description, ''), COALESCE(product_type, 'MENU'), price, stock, COALESCE(unit, 'pcs'), category_id, COALESCE(image_url, ''), is_active, COALESCE(created_by::text, ''), created_at, updated_at, deleted_at"
 
 func (r *postgresRepository) Create(ctx context.Context, p *Product) error {
 	err := r.db.QueryRowContext(ctx, `
-		INSERT INTO products (store_id, organization_id, name, sku, description, price, stock, unit, category_id, image_url, is_active, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9, '')::uuid, $10, $11, NULLIF($12, '')::uuid)
-		RETURNING id, COALESCE(unit, 'pcs'), is_active, created_at, updated_at`,
-		p.StoreID, p.OrganizationID, p.Name, p.SKU, p.Description, p.Price, p.Stock, p.Unit,
+		INSERT INTO products (store_id, organization_id, name, sku, description, product_type, price, stock, unit, category_id, image_url, is_active, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10, '')::uuid, $11, $12, NULLIF($13, '')::uuid)
+		RETURNING id, COALESCE(unit, 'pcs'), COALESCE(product_type, 'MENU'), is_active, created_at, updated_at`,
+		p.StoreID, p.OrganizationID, p.Name, p.SKU, p.Description, p.ProductType, p.Price, p.Stock, p.Unit,
 		nullableStr(p.CategoryID), p.ImageURL, p.IsActive, p.CreatedBy,
-	).Scan(&p.ID, &p.Unit, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+	).Scan(&p.ID, &p.Unit, &p.ProductType, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" &&
@@ -101,11 +101,11 @@ func (r *postgresRepository) FindByStore(ctx context.Context, orgID, storeID str
 func (r *postgresRepository) Update(ctx context.Context, p *Product) error {
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE products
-		SET name = $4, sku = $5, description = $6, price = $7, stock = $8,
-			unit = $9, category_id = NULLIF($10, '')::uuid,
-			image_url = $11, is_active = $12, updated_at = NOW()
+		SET name = $4, sku = $5, description = $6, product_type = $7, price = $8, stock = $9,
+			unit = $10, category_id = NULLIF($11, '')::uuid,
+			image_url = $12, is_active = $13, updated_at = NOW()
 		WHERE organization_id = $1 AND store_id = $2 AND id = $3 AND deleted_at IS NULL`,
-		p.OrganizationID, p.StoreID, p.ID, p.Name, p.SKU, p.Description, p.Price, p.Stock,
+		p.OrganizationID, p.StoreID, p.ID, p.Name, p.SKU, p.Description, p.ProductType, p.Price, p.Stock,
 		p.Unit, nullableStr(p.CategoryID), p.ImageURL, p.IsActive)
 	if err != nil {
 		var pqErr *pq.Error
@@ -180,6 +180,10 @@ func buildFilter(orgID, storeID string, filter Filter) (string, []any) {
 		args = append(args, *filter.CategoryID)
 		where += ` AND category_id = $` + itoa(len(args)) + `::uuid`
 	}
+	if t := strings.TrimSpace(filter.ProductType); t != "" {
+		args = append(args, t)
+		where += ` AND product_type = $` + itoa(len(args))
+	}
 	if filter.IsActive != nil {
 		args = append(args, *filter.IsActive)
 		where += ` AND is_active = $` + itoa(len(args))
@@ -191,7 +195,7 @@ func buildFilter(orgID, storeID string, filter Filter) (string, []any) {
 func scanProductDest(p *Product) []any {
 	return []any{
 		&p.ID, &p.StoreID, &p.OrganizationID, &p.Name, &p.SKU,
-		&p.Description, &p.Price, &p.Stock, &p.Unit, &p.CategoryID,
+		&p.Description, &p.ProductType, &p.Price, &p.Stock, &p.Unit, &p.CategoryID,
 		&p.ImageURL, &p.IsActive, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt,
 	}
 }

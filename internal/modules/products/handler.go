@@ -46,11 +46,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p, err := h.svc.Create(r.Context(), orgID, storeID, createdBy,
-		req.Name, req.SKU, req.Description, req.Price, req.Stock, req.Unit, req.CategoryID, req.ImageURL)
+		req.Name, req.SKU, req.Description, req.ProductType, req.Price, req.Stock, req.Unit, req.CategoryID, req.ImageURL)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidInput):
 			response.Error(w, http.StatusBadRequest, "name dan sku wajib diisi")
+		case errors.Is(err, ErrInvalidProductType):
+			response.Error(w, http.StatusBadRequest, "product_type harus MENU, RAW_MATERIAL, PACKAGING, atau OTHER")
 		case errors.Is(err, ErrInvalidPrice):
 			response.Error(w, http.StatusBadRequest, "price harus >= 0")
 		case errors.Is(err, ErrInvalidStock):
@@ -154,11 +156,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p, err := h.svc.Update(r.Context(), orgID, storeID, id,
-		req.Name, req.SKU, req.Description, req.Price, req.Stock, req.Unit, req.CategoryID, req.ImageURL, *req.IsActive)
+		req.Name, req.SKU, req.Description, req.ProductType, req.Price, req.Stock, req.Unit, req.CategoryID, req.ImageURL, *req.IsActive)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidInput):
 			response.Error(w, http.StatusBadRequest, "name dan sku wajib diisi")
+		case errors.Is(err, ErrInvalidProductType):
+			response.Error(w, http.StatusBadRequest, "product_type harus MENU, RAW_MATERIAL, PACKAGING, atau OTHER")
 		case errors.Is(err, ErrInvalidPrice):
 			response.Error(w, http.StatusBadRequest, "price harus >= 0")
 		case errors.Is(err, ErrInvalidStock):
@@ -201,7 +205,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, http.StatusOK, MessageResponse{Message: "Product berhasil dihapus"})
 }
 
-// parseFilter membaca query search/category_id/is_active/page/limit.
+// parseFilter membaca query search/category_id/product_type/is_active/page/limit.
 func parseFilter(r *http.Request) Filter {
 	q := r.URL.Query()
 	var f Filter
@@ -209,6 +213,7 @@ func parseFilter(r *http.Request) Filter {
 	if c := strings.TrimSpace(q.Get("category_id")); c != "" {
 		f.CategoryID = &c
 	}
+	f.ProductType = strings.TrimSpace(q.Get("product_type"))
 	if v := strings.TrimSpace(q.Get("is_active")); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			f.IsActive = &b

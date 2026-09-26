@@ -24,6 +24,7 @@ migrate:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/011_create_kitchen_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/012_sales_variant_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/013_create_refresh_tokens_up.sql
+	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/014_product_type_up.sql
 migrate-fresh:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/001_create_users.sql
@@ -39,6 +40,7 @@ migrate-fresh:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/011_create_kitchen_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/012_sales_variant_up.sql
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/013_create_refresh_tokens_up.sql
+	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/014_product_type_up.sql
 
 seed:
 	psql -U $(DB_USER) -h $(DB_HOST) -d $(DB_NAME) -f migrations/seed.sql

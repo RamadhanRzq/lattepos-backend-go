@@ -66,7 +66,7 @@ func (h *Handler) Record(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrNoAccess):
 			response.Error(w, http.StatusForbidden, "Anda tidak punya akses ke store ini")
 		default:
-			response.Error(w, http.StatusInternalServerError, "Gagal mencatat movement")
+			response.Error(w, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}

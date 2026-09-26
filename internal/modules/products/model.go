@@ -8,15 +8,34 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
 )
 
+// Tipe product: MENU barang jual, RAW_MATERIAL bahan baku, PACKAGING, OTHER.
+const (
+	TypeMenu        = "MENU"
+	TypeRawMaterial = "RAW_MATERIAL"
+	TypePackaging   = "PACKAGING"
+	TypeOther       = "OTHER"
+)
+
+// IsValidType melaporkan apakah typ salah satu tipe product yang dikenal.
+func IsValidType(typ string) bool {
+	switch typ {
+	case TypeMenu, TypeRawMaterial, TypePackaging, TypeOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Error domain module products.
 var (
-	ErrNotFound      = errors.New("product not found")
-	ErrSKUDuplicate  = errors.New("product SKU already exists in this store")
-	ErrUnauthorized  = errors.New("unauthorized to access this product")
-	ErrInvalidInput  = errors.New("product: invalid input")
-	ErrInvalidPrice  = errors.New("product: price must be >= 0")
-	ErrInvalidStock  = errors.New("product: stock must be >= 0")
-	ErrStoreNotFound = errors.New("product: store not found")
+	ErrNotFound           = errors.New("product not found")
+	ErrSKUDuplicate       = errors.New("product SKU already exists in this store")
+	ErrUnauthorized       = errors.New("unauthorized to access this product")
+	ErrInvalidInput       = errors.New("product: invalid input")
+	ErrInvalidPrice       = errors.New("product: price must be >= 0")
+	ErrInvalidStock       = errors.New("product: stock must be >= 0")
+	ErrInvalidProductType = errors.New("product: invalid product type")
+	ErrStoreNotFound      = errors.New("product: store not found")
 )
 
 // Product adalah barang dagangan milik satu store dalam satu organization.
@@ -27,6 +46,7 @@ type Product struct {
 	Name           string     `json:"name"`
 	SKU            string     `json:"sku"`
 	Description    string     `json:"description,omitempty"`
+	ProductType    string     `json:"product_type"`
 	Price          int64      `json:"price"`
 	Stock          int        `json:"stock"`
 	Unit           string     `json:"unit"`
@@ -41,11 +61,12 @@ type Product struct {
 
 // Filter adalah parameter query list product dalam satu store.
 type Filter struct {
-	Search     string
-	CategoryID *string
-	IsActive   *bool
-	Page       int
-	Limit      int
+	Search      string
+	CategoryID  *string
+	ProductType string
+	IsActive    *bool
+	Page        int
+	Limit       int
 }
 
 // Repository adalah kontrak penyimpanan product.
