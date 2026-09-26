@@ -1769,7 +1769,7 @@
                 }
               ]
             },
-            "description": "Buat transaksi (harga snapshot dari product, total dihitung server)\n\nAuth: `org`.",
+            "description": "Buat transaksi (harga snapshot dari product, total dihitung server). Sale + pemotongan stok satu transaksi: stok kurang → 409 tanpa menyimpan sale. Antrian dapur dibuka otomatis setelah commit.\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"product_id\": \"\",\n      \"variant_id\": null,\n      \"quantity\": 1\n    }\n  ]\n}",
@@ -2006,7 +2006,7 @@
                 }
               ]
             },
-            "description": "Buat transaksi (alias sales, payload identik)\n\nAuth: `org`.",
+            "description": "Buat transaksi (alias sales, payload identik; sale + potong stok satu transaksi, stok kurang → 409)\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"product_id\": \"\",\n      \"variant_id\": null,\n      \"quantity\": 1\n    }\n  ]\n}",
@@ -2684,13 +2684,13 @@
               ],
               "query": [
                 {
-                  "key": "only_active",
+                  "key": "active",
                   "value": "",
                   "disabled": true
                 }
               ]
             },
-            "description": "List price satu product (query only_active=true untuk harga aktif)\n\nAuth: `org`."
+            "description": "List price satu product (query active=true untuk harga aktif)\n\nAuth: `org`."
           },
           "response": []
         },
@@ -2841,7 +2841,7 @@
                 }
               ]
             },
-            "description": "Catat mutasi stok (in/out/adjustment/return; update stok live dalam satu tx)\n\nAuth: `org`.",
+            "description": "Catat mutasi stok (in/out/adjustment/return; update stok live dalam satu tx). Bila dipanggil dari pembuatan sale, join tx sale yang sama.\n\nAuth: `org`.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"product_id\": \"\",\n  \"variant_id\": null,\n  \"type\": \"in\",\n  \"quantity\": 10,\n  \"reference_type\": \"\",\n  \"reference_id\": \"\",\n  \"notes\": \"restock pagi\",\n  \"allow_negative\": false\n}",

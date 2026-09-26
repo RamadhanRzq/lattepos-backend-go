@@ -2,6 +2,11 @@ package router
 
 import (
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -89,6 +94,96 @@ func TestDocsCatalogCoversMux(t *testing.T) {
 			t.Errorf("route mux tanpa katalog: %s", r)
 		}
 	}
+}
+
+// TestDocsQueryParamsMatchHandlers menjaga keselarasan nama query param antara
+// katalog dan handler. Drift nyata: katalog menulis "only_active" padahal
+// handler membaca "active" — user Postman dapat hasil tak terfilter tanpa error.
+func TestDocsQueryParamsMatchHandlers(t *testing.T) {
+	documented := map[string]bool{}
+	var col struct {
+		Item []struct {
+			Item []struct {
+				Request struct {
+					URL struct {
+						Query []struct {
+							Key string `json:"key"`
+						} `json:"query"`
+					} `json:"url"`
+				} `json:"request"`
+			} `json:"item"`
+		} `json:"item"`
+	}
+	if err := json.Unmarshal(apiDocsJSON, &col); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range col.Item {
+		for _, it := range f.Item {
+			for _, q := range it.Request.URL.Query {
+				documented[q.Key] = true
+			}
+		}
+	}
+
+	files, err := filepath.Glob("../../internal/modules/*/handler.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) == 0 {
+		t.Fatal("tidak menemukan handler module")
+	}
+	used := map[string]bool{}
+	for _, name := range files {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok || len(call.Args) != 1 {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "Get" {
+				return true
+			}
+			if !isQuerySource(sel.X) {
+				return true
+			}
+			if lit, ok := call.Args[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if key, err := strconv.Unquote(lit.Value); err == nil {
+					used[key] = true
+				}
+			}
+			return true
+		})
+	}
+
+	for k := range used {
+		if !documented[k] {
+			t.Errorf("handler baca query %q tapi tidak ada di api-docs.json", k)
+		}
+	}
+	for k := range documented {
+		if !used[k] {
+			t.Errorf("api-docs.json dokumentasikan query %q tapi tidak ada handler yang membacanya", k)
+		}
+	}
+}
+
+// isQuerySource melaporkan apakah expr adalah `r.URL.Query()` atau variabel
+// hasilnya (`q := r.URL.Query()`).
+func isQuerySource(expr ast.Expr) bool {
+	if ident, ok := expr.(*ast.Ident); ok {
+		return ident.Name == "q"
+	}
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "Query"
 }
 
 // muxPattern mengubah path collection (":slug") ke pola mux ("{slug}").
