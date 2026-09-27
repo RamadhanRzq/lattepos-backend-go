@@ -16,6 +16,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
+	"github.com/ramadhanrzq/backend-go/internal/modules/tables"
 	"github.com/ramadhanrzq/backend-go/internal/modules/transactions"
 	"github.com/ramadhanrzq/backend-go/internal/modules/users"
 	"github.com/ramadhanrzq/backend-go/internal/modules/variants"
@@ -43,6 +44,7 @@ type Deps struct {
 	Stock         *stock.Handler
 	Recipes       *recipes.Handler
 	Kitchen       *kitchen.Handler
+	Tables        *tables.Handler
 }
 
 // New merangkai route semua module menjadi satu http.Handler.
@@ -65,6 +67,7 @@ func New(deps Deps) http.Handler {
 	stock.RegisterRoutes(mux, deps.Stock, deps.Verifier, deps.Orgs)
 	recipes.RegisterRoutes(mux, deps.Recipes, deps.Verifier, deps.Orgs)
 	kitchen.RegisterRoutes(mux, deps.Kitchen, deps.Verifier, deps.Orgs)
+	tables.RegisterRoutes(mux, deps.Tables, deps.Verifier, deps.Orgs)
 	return middleware.CORS(deps.CORSConfig, middleware.Logger(mux))
 }
 

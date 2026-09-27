@@ -24,6 +24,7 @@ import (
 	"github.com/ramadhanrzq/backend-go/internal/modules/sales"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stock"
 	"github.com/ramadhanrzq/backend-go/internal/modules/stores"
+	"github.com/ramadhanrzq/backend-go/internal/modules/tables"
 	"github.com/ramadhanrzq/backend-go/internal/modules/transactions"
 	"github.com/ramadhanrzq/backend-go/internal/modules/users"
 	"github.com/ramadhanrzq/backend-go/internal/modules/variants"
@@ -79,6 +80,7 @@ func run() error {
 	categoryRepo := categories.NewRepository(db)
 	stockRepo := stock.NewRepository(db)
 	kitchenRepo := kitchen.NewRepository(db)
+	tableRepo := tables.NewRepository(db)
 	recipeRepo := recipes.NewRepository(db)
 
 	variantSvc := variants.NewService(variantRepo, storeRepo, productRepo)
@@ -87,6 +89,7 @@ func run() error {
 	stockSvc := stock.NewService(stockRepo, storeRepo)
 	recipeSvc := recipes.NewService(recipeRepo, storeRepo, productRepo, stockSvc)
 	kitchenSvc := kitchen.NewService(kitchenRepo, storeRepo, sales.NewRepository(db))
+	tableSvc := tables.NewService(tableRepo, storeRepo)
 	productSvc := products.NewService(productRepo, storeRepo, productDetailSources{variants: variantSvc, prices: priceSvc})
 	saleSvc := sales.NewService(sales.NewRepository(db), storeRepo, productRepo, priceSvc, saleSideEffects(stockSvc, recipeSvc, kitchenSvc))
 	txSvc := transactions.NewService(saleSvc, storeRepo)
@@ -110,6 +113,7 @@ func run() error {
 		Stock:         stock.NewHandler(stockSvc),
 		Recipes:       recipes.NewHandler(recipeSvc),
 		Kitchen:       kitchen.NewHandler(kitchenSvc),
+		Tables:        tables.NewHandler(tableSvc),
 	})
 
 	srv := &http.Server{
